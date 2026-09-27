@@ -14,10 +14,12 @@ from backend.app.models.comment import Comment
 from backend.app.models.like import Like
 from backend.app.models.audit_log import AuditLog
 
-def seed_database():
+def seed_database(custom_engine=None, custom_session_maker=None):
+    target_engine = custom_engine or engine
+    target_session_maker = custom_session_maker or SessionLocal
     print("Initializing database tables...")
-    Base.metadata.create_all(bind=engine)
-    db: Session = SessionLocal()
+    Base.metadata.create_all(bind=target_engine)
+    db: Session = target_session_maker()
 
     try:
         # Check if already seeded
@@ -35,7 +37,8 @@ def seed_database():
             full_name="Nexus System Administrator",
             bio="Platform administrator overseeing production data pipelines and cluster telemetry.",
             avatar_url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-            role=UserRole.ADMIN
+            role=UserRole.ADMIN,
+            is_verified=True
         )
 
         elena = User(
@@ -45,7 +48,8 @@ def seed_database():
             full_name="Dr. Elena Vance",
             bio="Staff AI Research Engineer specializing in dense retrieval, RAG, and neuro-symbolic search.",
             avatar_url="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80",
-            role=UserRole.AUTHOR
+            role=UserRole.AUTHOR,
+            is_verified=True
         )
 
         marcus = User(
@@ -55,7 +59,8 @@ def seed_database():
             full_name="Marcus Chen",
             bio="Principal GPU Systems Architect. Optimizing CUDA kernels, Triton compiler passes, and high-throughput LLM serving.",
             avatar_url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
-            role=UserRole.AUTHOR
+            role=UserRole.AUTHOR,
+            is_verified=True
         )
 
         sarah = User(
@@ -65,7 +70,8 @@ def seed_database():
             full_name="Sarah Jenkins",
             bio="Lead Data Architect focusing on petabyte-scale lakehouses, Apache Iceberg, and distributed query engines.",
             avatar_url="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80",
-            role=UserRole.AUTHOR
+            role=UserRole.AUTHOR,
+            is_verified=True
         )
 
         reader_user = User(
@@ -75,18 +81,32 @@ def seed_database():
             full_name="Alex Mercer",
             bio="Data Platform Enthusiast and Senior ML Engineer.",
             avatar_url="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
-            role=UserRole.READER
+            role=UserRole.READER,
+            is_verified=True
         )
 
-        db.add_all([admin_user, elena, marcus, sarah, reader_user])
+        # Unverified demo user to test first-time login OTP flow
+        new_engineer = User(
+            username="new_engineer",
+            email="alex.chen@innovate.ai",
+            hashed_password=hash_password("Engineer@123"),
+            full_name="Alex Chen",
+            bio="Staff ML Infrastructure Engineer exploring MLA kernels and Triton compiler optimization.",
+            avatar_url="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+            role=UserRole.AUTHOR,
+            is_verified=False
+        )
+
+        db.add_all([admin_user, elena, marcus, sarah, reader_user, new_engineer])
         db.commit()
         db.refresh(admin_user)
         db.refresh(elena)
         db.refresh(marcus)
         db.refresh(sarah)
         db.refresh(reader_user)
+        db.refresh(new_engineer)
 
-        print("Seeding 8 high-caliber Data Engineering & AI articles...")
+        print("Seeding 9 high-caliber Data Engineering & AI articles...")
 
         posts_data = [
             {
@@ -655,6 +675,136 @@ Log-based metrics alone are insufficient; you must evaluate semantic output qual
 To prevent runaway agent loops from exhausting API budgets:
 1. **Hard Max-Turn Thresholds**: Never allow an agent to iterate more than 10 turns without explicit human-in-the-loop authorization.
 2. **Token Budget Leaky Bucket**: Set maximum cost allowances (e.g. $0.25 per user session). If exceeded, trigger a graceful circuit breaker and return a fallback explanation to the client."""
+            },
+            {
+                "title": "DeepSeek-V3 Architecture: Multi-Head Latent Attention (MLA) Deep Dive",
+                "slug": "deepseek-v3-multi-head-latent-attention-mla",
+                "category": "LLM Infrastructure",
+                "tags": "DeepSeek,MLA,KVCache,Transformers,Inference",
+                "author_id": marcus.id,
+                "read_time_minutes": 11,
+                "cover_image": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80",
+                "excerpt": "How DeepSeek-V3 compresses the KV-cache by over 93% using low-rank latent joint compression and decoupled RoPE. An in-depth mathematical dissection, architectural comparison with GQA, and Triton implementation.",
+                "content": """## The Severe Memory Wall of LLM Context Windows
+
+In frontier Large Language Model inference, the memory bandwidth required to fetch Key-Value (KV) cache tensors during autoregressive token generation dwarfs actual matrix multiplication compute.
+
+Consider a 67B parameter model operating across a 128,000 token context window with standard Multi-Head Attention (MHA):
+- Number of layers: L = 60
+- Hidden dimension: d_model = 8192
+- Number of heads: N_h = 64, Head dimension: d_h = 128
+- Cache size per token: 2 * L * N_h * d_h * 2 bytes (FP16) = 1.96 MB per token
+
+Across a 128k context sequence, the KV cache alone consumes **over 250 GB of VRAM per concurrent stream**! Even Grouped-Query Attention (GQA) with 8 key-value groups consumes over 31 GB per stream, severely choking multi-tenant serving concurrency.
+
+```
+MHA (Standard):
+[ Key Head 1 .. 64 ][ Value Head 1 .. 64 ]  --> 100% Memory Footprint
+
+GQA (Llama-3):
+[ Key Group 1 .. 8  ][ Value Group 1 .. 8  ]  --> 12.5% Memory Footprint
+
+DeepSeek MLA (Multi-Head Latent Attention):
+[ Single Compressed Latent Vector c_t^{KV} ]  --> 6.8% Memory Footprint!
+       + Decoupled Positional RoPE k_t^R
+```
+
+## Mathematical Foundations of Multi-Head Latent Attention (MLA)
+
+Multi-Head Latent Attention (MLA) abandons the caching of independent Key and Value projection heads entirely. Instead, it compresses the Key and Value representations into a single **low-rank latent vector**:
+
+### 1. Joint Low-Rank Key-Value Compression
+During generation, token representation h_t is projected into a compact latent vector c_t^{KV} in R^{d_c} where latent dimension d_c = 512:
+
+c_t^{KV} = W^{DKV} h_t
+
+where W^{DKV} is the down-projection matrix.
+
+Only this compressed vector c_t^{KV} is persisted in the GPU KV-cache!
+
+### 2. Up-Projection During Attention Execution
+During the attention kernel computation, keys and values are dynamically reconstructed on SRAM:
+
+k_t^C = W^{UK} c_t^{KV}
+v_t^C = W^{UV} c_t^{KV}
+
+### 3. Decoupled Rotary Position Embedding (RoPE)
+A critical innovation in MLA is how it resolves Rotary Position Embedding (RoPE). Standard RoPE cannot be directly multiplied into an up-projected matrix without losing associative efficiency.
+
+DeepSeek decouples positional information into a separate low-dimensional key vector k_t^R in R^{d_r} (where d_r = 64):
+
+k_t^R = RoPE(W^{KR} h_t)
+q_t^R = RoPE(W^{QR} c_t^Q)
+
+The final attention query and key vectors are concatenated:
+q_{t, i} = [q_{t, i}^C; q_{t, i}^R]
+k_{t, i} = [k_{t, i}^C; k_{t, i}^R]
+
+Because k_t^R is shared across all attention heads and has a small dimension (64), caching both c_t^{KV} and k_t^R requires merely:
+512 + 64 = 576 scalar elements per token
+
+Compare this to standard MHA (64 * 128 * 2 = 16,384 elements per token). **MLA achieves a 96.5% reduction in KV-cache footprint!**
+
+## Triton Kernel Implementation
+
+Below is a production-optimized PyTorch and Triton kernel implementation demonstrating the low-rank projection and decoupled RoPE computation:
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class MultiHeadLatentAttention(nn.Module):
+    def __init__(self, d_model=4096, n_heads=32, d_head=128, d_latent_kv=512, d_rope=64):
+        super().__init__()
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.d_head = d_head
+        self.d_latent_kv = d_latent_kv
+        self.d_rope = d_rope
+        
+        # KV Down-Projection
+        self.W_DKV = nn.Linear(d_model, d_latent_kv, bias=False)
+        # KV Up-Projections
+        self.W_UK = nn.Linear(d_latent_kv, n_heads * d_head, bias=False)
+        self.W_UV = nn.Linear(d_latent_kv, n_heads * d_head, bias=False)
+        
+        # Decoupled RoPE Projections
+        self.W_KR = nn.Linear(d_model, d_rope, bias=False)
+        self.W_Q = nn.Linear(d_model, n_heads * (d_head + d_rope), bias=False)
+        
+    def forward(self, x, kv_cache=None):
+        batch, seq_len, _ = x.shape
+        
+        # 1. Compress KV into latent representation
+        c_kv = self.W_DKV(x) # [Batch, Seq, 512]
+        k_rope = self.apply_rope(self.W_KR(x)) # [Batch, Seq, 64]
+        
+        # 2. Store only compressed latent in KV Cache
+        # Cache memory: 576 floats per token instead of 8192!
+        if kv_cache is not None:
+            c_kv, k_rope = kv_cache.update(c_kv, k_rope)
+            
+        # 3. Dynamic Matrix Absorption during inference
+        # W_UK can be absorbed into Query weights: Q_eff = Q @ W_UK
+        keys = self.W_UK(c_kv).view(batch, -1, self.n_heads, self.d_head)
+        values = self.W_UV(c_kv).view(batch, -1, self.n_heads, self.d_head)
+        
+        return keys, values
+```
+
+## Benchmarks & Takeaways
+
+| Architecture | Model Size | Context | KV Cache / Stream | Peak Batch Size (8x H100) |
+| :--- | :--- | :--- | :--- | :--- |
+| MHA Baseline | 67B | 32k | 64.0 GB | 12 reqs |
+| GQA (Llama-3) | 70B | 32k | 8.0 GB | 96 reqs |
+| **MLA (DeepSeek-V3)** | **67B** | **32k** | **2.2 GB** | **348 reqs (3.6x GQA)** |
+
+### Engineering Guidelines
+- **Deploy MLA for Large Contexts (>16k tokens)**: The KV cache compression yields direct linear gains in maximum batch size and throughput.
+- **Absorb Up-Projection Weights**: During inference, mathematically absorb W^{UK} directly into the Query projection matrix W^Q prior to kernel launch to eliminate one matrix multiplication step.
+- **Pair with Chunked Prefill**: Pair MLA with continuous iteration scheduling (vLLM style) to maintain SLA parity across mixed prefill and decode phases."""
             }
         ]
 
@@ -679,7 +829,9 @@ To prevent runaway agent loops from exhausting API budgets:
             (created_posts[3].id, reader_user.id, "Two-phase commit with Kafka is notoriously tricky to get right. This diagram and step-by-step lifecycle is bookmarked."),
             (created_posts[4].id, sarah.id, "Training-serving skew has caused so many silent production outages. The dual-store Redis architecture is mandatory for any serious ML team."),
             (created_posts[6].id, elena.id, "AWQ INT4 is our default for all edge and single-GPU deployments now. The perplexity preservation on 70B models is unbelievable."),
-            (created_posts[7].id, sarah.id, "The OpenTelemetry semantic conventions for tools and token tracking are must-haves. Great point on hard max-turn thresholds.")
+            (created_posts[7].id, sarah.id, "The OpenTelemetry semantic conventions for tools and token tracking are must-haves. Great point on hard max-turn thresholds."),
+            (created_posts[8].id, elena.id, "The matrix absorption trick during inference is brilliant. That alone saves an entire memory round-trip to High Bandwidth Memory."),
+            (created_posts[8].id, reader_user.id, "We were struggling with KV-cache OOM on 64k sequences with Llama-70B. MLA is clearly the future of long-context inference architectures.")
         ]
 
         for post_id, author_id, content in comments_data:
@@ -702,6 +854,10 @@ To prevent runaway agent loops from exhausting API budgets:
             (created_posts[6].id, reader_user.id),
             (created_posts[7].id, sarah.id),
             (created_posts[7].id, marcus.id),
+            (created_posts[8].id, admin_user.id),
+            (created_posts[8].id, elena.id),
+            (created_posts[8].id, sarah.id),
+            (created_posts[8].id, reader_user.id),
         ]
 
         for post_id, user_id in likes_data:
@@ -712,7 +868,7 @@ To prevent runaway agent loops from exhausting API budgets:
         db.add(AuditLog(
             action="SYSTEM_INIT",
             username="system",
-            details="Database populated with 8 production engineering articles and seed users"
+            details="Database populated with 9 production engineering articles and seed users"
         ))
 
         db.commit()

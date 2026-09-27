@@ -1380,6 +1380,210 @@ code, pre {
   font-size: 0.78rem;
 }
 
+/* ============================================================================ */
+/* First-Time Login OTP Verification Styles                                     */
+/* ============================================================================ */
+.otp-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: fadeInModal 0.25s ease-out forwards;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.otp-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.otp-shield-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6366F1;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+
+.otp-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.otp-subtitle {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0;
+  padding: 0 0.5rem;
+}
+
+.otp-email-highlight {
+  display: inline-block;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.25rem;
+}
+
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.otp-input-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.otp-boxes-wrapper {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 0.25rem 0;
+}
+
+.otp-digit {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: monospace, var(--font-sans);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-medium);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.otp-digit:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  transform: translateY(-2px);
+  background: var(--bg-primary);
+}
+
+.otp-digit.filled {
+  border-color: var(--text-primary);
+}
+
+.demo-otp-banner {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(16, 185, 129, 0.03));
+  border: 1px dashed rgba(34, 197, 94, 0.4);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.demo-otp-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.demo-otp-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #10B981;
+}
+
+.copy-otp-chip {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: #10B981;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.copy-otp-chip:hover {
+  opacity: 0.88;
+}
+
+.demo-otp-code-line {
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.demo-otp-code-line strong {
+  font-family: monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  color: #10B981;
+  margin-left: 0.25rem;
+}
+
+.demo-otp-note {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.otp-countdown-row {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.otp-countdown-row strong {
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.otp-actions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+.text-link-btn {
+  background: none;
+  border: none;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.3rem 0;
+  transition: color 0.15s ease;
+}
+
+.text-link-btn:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.text-link-btn.back-btn {
+  font-weight: 500;
+}
+
 /* Editor Studio Dialog */
 .editor-modal-dialog {
   width: 100%;

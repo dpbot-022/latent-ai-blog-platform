@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union, Any
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from backend.app.models.user import UserRole
 
@@ -21,6 +21,7 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     id: int
     role: UserRole
+    is_verified: bool = False
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +37,20 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+class OTPRequiredResponse(BaseModel):
+    requires_otp: bool = True
+    username: str
+    email_masked: str
+    message: str
+    demo_otp_hint: Optional[str] = None
+
+class OTPVerifyRequest(BaseModel):
+    username: str
+    otp_code: str = Field(..., min_length=6, max_length=6)
+
+class OTPResendRequest(BaseModel):
+    username: str
 
 class TokenData(BaseModel):
     user_id: Optional[int] = None

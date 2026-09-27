@@ -19,7 +19,9 @@ const state = {
   userLikedPostIds: new Set(JSON.parse(localStorage.getItem("latent_liked_ids") || "[]")),
   userSavedPostIds: new Set(JSON.parse(localStorage.getItem("latent_saved_ids") || "[]")),
   userReadingHistory: JSON.parse(localStorage.getItem("latent_history_ids") || "[]"),
-  currentReadingPost: null
+  currentReadingPost: null,
+  otpPendingUsername: null,
+  otpTimerInterval: null
 };
 
 // DOM Elements
@@ -94,12 +96,27 @@ const dom = {
 
   authModal: document.getElementById("authModal"),
   closeAuthModalBtn: document.getElementById("closeAuthModalBtn"),
+  authTabs: document.querySelector(".auth-tabs"),
   tabLoginBtn: document.getElementById("tabLoginBtn"),
   tabRegisterBtn: document.getElementById("tabRegisterBtn"),
   loginForm: document.getElementById("loginForm"),
   registerForm: document.getElementById("registerForm"),
   loginErrorMsg: document.getElementById("loginErrorMsg"),
   registerErrorMsg: document.getElementById("registerErrorMsg"),
+
+  // OTP Verification Elements
+  otpStepContainer: document.getElementById("otpStepContainer"),
+  otpTargetUsername: document.getElementById("otpTargetUsername"),
+  otpTargetEmail: document.getElementById("otpTargetEmail"),
+  otpVerifyForm: document.getElementById("otpVerifyForm"),
+  otpDigits: [0, 1, 2, 3, 4, 5].map(i => document.getElementById("otp" + i)),
+  otpDemoCodeValue: document.getElementById("otpDemoCodeValue"),
+  autoFillOtpBtn: document.getElementById("autoFillOtpBtn"),
+  otpErrorMsg: document.getElementById("otpErrorMsg"),
+  otpCountdownTimer: document.getElementById("otpCountdownTimer"),
+  submitOtpBtn: document.getElementById("submitOtpBtn"),
+  resendOtpBtn: document.getElementById("resendOtpBtn"),
+  backToLoginFormBtn: document.getElementById("backToLoginFormBtn"),
 
   editorModal: document.getElementById("editorModal"),
   closeEditorModalBtn: document.getElementById("closeEditorModalBtn"),
@@ -1101,13 +1118,24 @@ dom.postEditorForm.addEventListener("submit", async (e) => {
 });
 
 // ============================================================================
-// Auth Modals
+// Auth Modals & First-Time Login OTP Filter
 // ============================================================================
 function openAuthModal(tab = "login") {
   dom.authModal.classList.add("active");
   document.body.style.overflow = "hidden";
   dom.loginErrorMsg.style.display = "none";
   dom.registerErrorMsg.style.display = "none";
+  if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
+
+  // Stop any active OTP timer
+  if (state.otpTimerInterval) {
+    clearInterval(state.otpTimerInterval);
+    state.otpTimerInterval = null;
+  }
+
+  // Restore tabs and hide OTP screen
+  if (dom.authTabs) dom.authTabs.style.display = "flex";
+  if (dom.otpStepContainer) dom.otpStepContainer.style.display = "none";
 
   if (tab === "login") {
     dom.tabLoginBtn.classList.add("active");
@@ -1125,6 +1153,235 @@ function openAuthModal(tab = "login") {
 function closeAuthModal() {
   dom.authModal.classList.remove("active");
   document.body.style.overflow = "";
+  if (state.otpTimerInterval) {
+    clearInterval(state.otpTimerInterval);
+    state.otpTimerInterval = null;
+  }
+}
+
+function showOtpVerificationStep(otpData) {
+  state.otpPendingUsername = otpData.username;
+
+  // Hide forms and tabs
+  if (dom.authTabs) dom.authTabs.style.display = "none";
+  dom.loginForm.style.display = "none";
+  dom.registerForm.style.display = "none";
+
+  // Show OTP Step
+  dom.otpStepContainer.style.display = "flex";
+  dom.otpTargetUsername.textContent = otpData.username;
+  dom.otpTargetEmail.textContent = otpData.email_masked || "registered email";
+  if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
+
+  // Dev Demo Hint display
+  if (otpData.demo_otp_hint) {
+    dom.otpDemoCodeValue.textContent = otpData.demo_otp_hint;
+    dom.demoOtpBanner.style.display = "flex";
+  } else {
+    dom.demoOtpBanner.style.display = "none";
+  }
+
+  // Reset inputs
+  dom.otpDigits.forEach(input => {
+    input.value = "";
+    input.classList.remove("filled");
+  });
+
+  // Focus first digit box
+  setTimeout(() => dom.otpDigits[0].focus(), 100);
+
+  // Start 10-minute countdown (600s)
+  startOtpCountdown(600);
+}
+
+function startOtpCountdown(secondsTotal) {
+  if (state.otpTimerInterval) clearInterval(state.otpTimerInterval);
+
+  let remaining = secondsTotal;
+  const updateTimerDisplay = () => {
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    dom.otpCountdownTimer.textContent = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
+  updateTimerDisplay();
+
+  state.otpTimerInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(state.otpTimerInterval);
+      state.otpTimerInterval = null;
+      dom.otpCountdownTimer.textContent = "Expired";
+      if (dom.otpErrorMsg) {
+        dom.otpErrorMsg.textContent = "Your verification code has expired. Please click 'Resend OTP'.";
+        dom.otpErrorMsg.style.display = "block";
+      }
+    } else {
+      updateTimerDisplay();
+    }
+  }, 1000);
+}
+
+// Setup Digit Inputs Navigation & Paste handling
+dom.otpDigits.forEach((input, idx) => {
+  if (!input) return;
+  // Input event: auto advance
+  input.addEventListener("input", () => {
+    const val = input.value.replace(/\D/g, "");
+    input.value = val ? val[val.length - 1] : "";
+    if (input.value) {
+      input.classList.add("filled");
+      if (idx < 5) {
+        dom.otpDigits[idx + 1].focus();
+      }
+    } else {
+      input.classList.remove("filled");
+    }
+
+    // Auto-submit or focus submit if all 6 filled
+    const allFilled = dom.otpDigits.every(d => d && d.value.length === 1);
+    if (allFilled) {
+      dom.submitOtpBtn.focus();
+    }
+  });
+
+  // Keydown event: backspace navigation
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace") {
+      if (!input.value && idx > 0) {
+        dom.otpDigits[idx - 1].focus();
+        dom.otpDigits[idx - 1].value = "";
+        dom.otpDigits[idx - 1].classList.remove("filled");
+      } else {
+        input.value = "";
+        input.classList.remove("filled");
+      }
+    } else if (e.key === "ArrowLeft" && idx > 0) {
+      dom.otpDigits[idx - 1].focus();
+    } else if (e.key === "ArrowRight" && idx < 5) {
+      dom.otpDigits[idx + 1].focus();
+    }
+  });
+
+  // Paste event: paste full 6-digit code
+  input.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+    if (pasted) {
+      pasted.split("").forEach((char, i) => {
+        if (dom.otpDigits[i]) {
+          dom.otpDigits[i].value = char;
+          dom.otpDigits[i].classList.add("filled");
+        }
+      });
+      const nextIdx = Math.min(pasted.length, 5);
+      if (pasted.length === 6) {
+        dom.submitOtpBtn.focus();
+      } else {
+        dom.otpDigits[nextIdx].focus();
+      }
+    }
+  });
+});
+
+// Auto-fill button helper
+if (dom.autoFillOtpBtn) {
+  dom.autoFillOtpBtn.addEventListener("click", () => {
+    const code = dom.otpDemoCodeValue.textContent.trim();
+    if (code && code.length === 6 && !isNaN(code)) {
+      code.split("").forEach((digit, i) => {
+        if (dom.otpDigits[i]) {
+          dom.otpDigits[i].value = digit;
+          dom.otpDigits[i].classList.add("filled");
+        }
+      });
+      dom.submitOtpBtn.focus();
+    }
+  });
+}
+
+// Return to Login screen
+if (dom.backToLoginFormBtn) {
+  dom.backToLoginFormBtn.addEventListener("click", () => {
+    openAuthModal("login");
+  });
+}
+
+// Resend OTP button
+if (dom.resendOtpBtn) {
+  dom.resendOtpBtn.addEventListener("click", async () => {
+    if (!state.otpPendingUsername) return;
+    try {
+      dom.resendOtpBtn.disabled = true;
+      dom.resendOtpBtn.textContent = "Sending...";
+      const res = await apiRequest("/api/v1/auth/resend-otp", {
+        method: "POST",
+        body: JSON.stringify({ username: state.otpPendingUsername })
+      });
+      if (res.demo_otp_hint) {
+        dom.otpDemoCodeValue.textContent = res.demo_otp_hint;
+      }
+      startOtpCountdown(600);
+      dom.otpDigits.forEach(d => { d.value = ""; d.classList.remove("filled"); });
+      dom.otpDigits[0].focus();
+      if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
+      showToast("Fresh 6-digit verification code sent to your email!", "info");
+    } catch (err) {
+      showToast(err.message, "danger");
+    } finally {
+      dom.resendOtpBtn.disabled = false;
+      dom.resendOtpBtn.textContent = "Didn't receive code? Resend OTP";
+    }
+  });
+}
+
+// Verify OTP Form Submission
+if (dom.otpVerifyForm) {
+  dom.otpVerifyForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
+
+    const otpCode = dom.otpDigits.map(d => d.value).join("");
+    if (otpCode.length !== 6) {
+      if (dom.otpErrorMsg) {
+        dom.otpErrorMsg.textContent = "Please enter all 6 digits of your verification code.";
+        dom.otpErrorMsg.style.display = "block";
+      }
+      return;
+    }
+
+    try {
+      dom.submitOtpBtn.disabled = true;
+      dom.submitOtpBtn.querySelector("span").textContent = "Verifying code...";
+
+      const res = await apiRequest("/api/v1/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({
+          username: state.otpPendingUsername,
+          otp_code: otpCode
+        })
+      });
+
+      // Verification successful: save JWT token and user
+      state.token = res.access_token;
+      state.user = res.user;
+      localStorage.setItem("latent_token", state.token);
+      closeAuthModal();
+      renderAuthNav();
+      showToast(`🎉 Verification complete! Welcome to Latent, ${state.user.full_name || state.user.username}!`, "success");
+      loadArticles();
+    } catch (err) {
+      if (dom.otpErrorMsg) {
+        dom.otpErrorMsg.textContent = err.message;
+        dom.otpErrorMsg.style.display = "block";
+      }
+      dom.otpDigits.forEach(d => d && d.classList.add("error"));
+      setTimeout(() => dom.otpDigits.forEach(d => d && d.classList.remove("error")), 800);
+    } finally {
+      dom.submitOtpBtn.disabled = false;
+      dom.submitOtpBtn.querySelector("span").textContent = "Verify & Complete Sign In";
+    }
+  });
 }
 
 dom.closeAuthModalBtn.addEventListener("click", closeAuthModal);
@@ -1142,6 +1399,15 @@ dom.loginForm.addEventListener("submit", async (e) => {
       method: "POST",
       body: JSON.stringify({ username, password })
     });
+
+    // Check if First-Time Login OTP is required!
+    if (res.requires_otp) {
+      showOtpVerificationStep(res);
+      showToast("🔐 First-time login detected. Enter the OTP sent to your email.", "info");
+      return;
+    }
+
+    // Direct login for verified user
     state.token = res.access_token;
     state.user = res.user;
     localStorage.setItem("latent_token", state.token);
@@ -1165,17 +1431,29 @@ dom.registerForm.addEventListener("submit", async (e) => {
   const role = document.getElementById("regRole").value;
 
   try {
-    const res = await apiRequest("/api/v1/auth/register", {
+    const regRes = await apiRequest("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify({ username, full_name, email, password, role })
     });
-    state.token = res.access_token;
-    state.user = res.user;
-    localStorage.setItem("latent_token", state.token);
-    closeAuthModal();
-    renderAuthNav();
-    showToast(`Welcome to Latent, ${state.user.full_name || state.user.username}!`, "success");
-    loadArticles();
+
+    showToast(`Account created for ${regRes.username}! Dispatched first-time security verification.`, "success");
+
+    // Automatically trigger first-time login to transition directly to the OTP screen!
+    try {
+      const loginRes = await apiRequest("/api/v1/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
+      if (loginRes.requires_otp) {
+        showOtpVerificationStep(loginRes);
+        return;
+      }
+    } catch (loginErr) {
+      // Fallback: switch to login tab with prefilled username
+      openAuthModal("login");
+      document.getElementById("loginUsername").value = username;
+      document.getElementById("loginPassword").focus();
+    }
   } catch (err) {
     dom.registerErrorMsg.textContent = err.message;
     dom.registerErrorMsg.style.display = "block";

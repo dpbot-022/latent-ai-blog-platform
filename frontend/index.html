@@ -213,7 +213,7 @@
 
         <!-- Dynamic Results / Pagination -->
         <div class="feed-footer-bar">
-          <span id="resultsCount">Showing 8 articles</span>
+          <span id="resultsCount">Showing 9 articles</span>
           <button class="secondary-btn" id="refreshFeedBtn">Refresh Feed</button>
         </div>
       </section>
@@ -529,7 +529,7 @@
       <form id="loginForm" class="auth-form">
         <div class="form-group">
           <label for="loginUsername">Username or Email</label>
-          <input type="text" id="loginUsername" placeholder="e.g. dr_elena or user@domain.com" required>
+          <input type="text" id="loginUsername" placeholder="e.g. dr_elena or new_engineer" required>
         </div>
         <div class="form-group">
           <label for="loginPassword">Password</label>
@@ -538,13 +538,74 @@
         <div class="form-error" id="loginErrorMsg"></div>
         <button type="submit" class="primary-btn w-full">Sign In to Latent</button>
         <div class="demo-credentials-box">
-          <small><strong>Demo Credentials:</strong><br>
-            • Author: <code>dr_elena</code> / <code>Author@123</code><br>
-            • Admin: <code>admin</code> / <code>Admin@123</code><br>
-            • Reader: <code>alex_reader</code> / <code>Reader@123</code>
+          <small><strong>Demo Accounts for Evaluators:</strong><br>
+            • <strong>Instant Sign-in:</strong> <code>dr_elena</code> / <code>Author@123</code> (Verified)<br>
+            • <strong>Instant Admin:</strong> <code>admin</code> / <code>Admin@123</code><br>
+            • <strong>First-Time OTP Flow:</strong> <code>new_engineer</code> / <code>Engineer@123</code> (Unverified)<br>
+            <em>Tip: Registering any new account also triggers the first-time email OTP filter!</em>
           </small>
         </div>
       </form>
+
+      <!-- First-Time Login OTP Verification Screen -->
+      <div id="otpStepContainer" class="otp-container" style="display: none;">
+        <div class="otp-header">
+          <div class="otp-shield-badge">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <polyline points="9 12 11 14 15 10"></polyline>
+            </svg>
+          </div>
+          <h3 class="otp-title">First-Time Security Verification</h3>
+          <p class="otp-subtitle">
+            Welcome, <strong id="otpTargetUsername">Engineer</strong>! Because this is your first login, a 6-digit one-time passcode (OTP) has been dispatched to your registered email:
+            <span class="otp-email-highlight" id="otpTargetEmail">u***@domain.com</span>
+          </p>
+        </div>
+
+        <form id="otpVerifyForm" class="otp-form">
+          <label class="otp-input-label">Enter 6-Digit Verification Code</label>
+          <div class="otp-boxes-wrapper">
+            <input type="text" maxlength="1" class="otp-digit" id="otp0" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autofocus>
+            <input type="text" maxlength="1" class="otp-digit" id="otp1" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="otp-digit" id="otp2" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="otp-digit" id="otp3" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="otp-digit" id="otp4" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="otp-digit" id="otp5" inputmode="numeric" pattern="[0-9]*">
+          </div>
+
+          <!-- Dev Terminal / Demo Simulation Helper -->
+          <div class="demo-otp-banner" id="demoOtpBanner">
+            <div class="demo-otp-banner-header">
+              <span class="demo-otp-tag">⚡ Email Simulator / Dev Hint</span>
+              <button type="button" class="copy-otp-chip" id="autoFillOtpBtn">Auto-fill Code</button>
+            </div>
+            <div class="demo-otp-code-line">
+              <span>OTP Code: <strong id="otpDemoCodeValue">------</strong></span>
+            </div>
+            <small class="demo-otp-note">In production, dispatched via SMTP service. Dispatched email is logged to terminal.</small>
+          </div>
+
+          <div class="form-error" id="otpErrorMsg" style="display: none;"></div>
+
+          <div class="otp-countdown-row">
+            <span>Code valid for: <strong id="otpCountdownTimer">10:00</strong></span>
+          </div>
+
+          <button type="submit" class="primary-btn w-full" id="submitOtpBtn">
+            <span>Verify & Complete Sign In</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <div class="otp-actions-footer">
+            <button type="button" class="text-link-btn" id="resendOtpBtn">Didn't receive code? Resend OTP</button>
+            <button type="button" class="text-link-btn back-btn" id="backToLoginFormBtn">← Back to Credentials</button>
+          </div>
+        </form>
+      </div>
 
       <!-- Register Form -->
       <form id="registerForm" class="auth-form" style="display: none;">
