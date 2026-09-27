@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusAI — Production-Grade AI & Data Engineering Journal</title>
+  <meta name="description" content="A production-grade, multi-tenant engineering publication platform for AI architects, data engineers, and systems researchers.">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <div class="brand-group" id="brandHomeBtn">
+        <div class="brand-logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">Nexus<span class="gradient-text">AI</span></span>
+          <span class="brand-subtitle">Production Journal</span>
+        </div>
+      </div>
+
+      <!-- Center Search Bar -->
+      <div class="nav-search-container">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="globalSearchInput" placeholder="Search architecture, RAG, lakehouse, CUDA..." autocomplete="off">
+        <span class="search-kbd" id="searchKbd">/</span>
+      </div>
+
+      <!-- Right Actions: System, Theme, Auth -->
+      <div class="header-actions">
+        <!-- Quick CSV Export Button -->
+        <button class="icon-btn" id="exportAllCsvBtn" title="Export all articles as CSV (Day 4 Deliverable)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span class="btn-text-responsive">CSV</span>
+        </button>
+
+        <!-- System Observability & Metrics Button -->
+        <button class="icon-btn" id="systemMetricsBtn" title="View Telemetry, Health & Audit Logs (Day 5)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span class="btn-text-responsive">Metrics</span>
+        </button>
+
+        <!-- Interactive API Docs Link -->
+        <a href="/docs" target="_blank" class="icon-btn" title="Interactive Swagger REST API (Day 2)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span class="btn-text-responsive">API</span>
+        </a>
+
+        <!-- Dark/Light Theme Toggle -->
+        <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle theme">
+          <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- Auth Status Container (Dynamic) -->
+        <div id="authNavContainer">
+          <!-- Populated by JS: Log In / Sign Up OR User Profile Avatar Dropdown -->
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Editorial Banner -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Production AI Engineering • Week 1 Foundations
+      </div>
+      <h1 class="hero-title">
+        Architecting the Next Generation of <span class="gradient-text">Scalable AI & Data Systems</span>
+      </h1>
+      <p class="hero-subtitle">
+        Curated, peer-reviewed engineering deep dives on Hybrid RAG, vLLM PagedAttention, Apache Iceberg Lakehouses, Real-time Stream Pipelines, and Autonomous Agent Tracing.
+      </p>
+
+      <!-- Quick Metrics Bar -->
+      <div class="hero-stats-row">
+        <div class="stat-pill"><strong id="heroTotalPosts">8</strong> Technical Papers</div>
+        <div class="stat-pill"><strong id="heroTotalLikes">14</strong> Community Likes</div>
+        <div class="stat-pill"><strong id="heroTotalComments">8</strong> Peer Discussions</div>
+        <div class="stat-pill status-healthy"><span class="pulse-indicator"></span> System Operational</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter & Controls Toolbar -->
+  <section class="controls-section">
+    <div class="controls-container">
+      <!-- Category Pills Scrollable -->
+      <div class="category-pills-bar" id="categoryPills">
+        <button class="cat-pill active" data-category="">All Domains</button>
+        <button class="cat-pill" data-category="Vector Search & RAG">Vector Search & RAG</button>
+        <button class="cat-pill" data-category="LLM Infrastructure">LLM Infrastructure</button>
+        <button class="cat-pill" data-category="Lakehouse & Big Data">Lakehouse & Big Data</button>
+        <button class="cat-pill" data-category="Stream Processing">Stream Processing</button>
+        <button class="cat-pill" data-category="MLOps & Platform">MLOps & Platform</button>
+        <button class="cat-pill" data-category="Data Engineering">Data Engineering</button>
+        <button class="cat-pill" data-category="Model Optimization">Model Optimization</button>
+        <button class="cat-pill" data-category="AI Ops & Observability">AI Ops & Observability</button>
+      </div>
+
+      <!-- Right Sorter Dropdown -->
+      <div class="sort-control">
+        <label for="sortBySelect" class="sort-label">Sort by:</label>
+        <select id="sortBySelect" class="custom-select">
+          <option value="created_at-desc">Latest Published</option>
+          <option value="likes-desc">Most Liked</option>
+          <option value="views-desc">Most Viewed</option>
+          <option value="read_time-asc">Quickest Read</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content: Panel-Wise Blog Grid -->
+  <main class="main-content">
+    <div class="content-container">
+      <div class="results-header" id="resultsHeader">
+        <h2 class="section-title">Peer-Reviewed Technical Articles</h2>
+        <span class="results-count" id="resultsCount">Showing 8 articles</span>
+      </div>
+
+      <!-- Panel-Wise Grid Layout -->
+      <div class="articles-panel-grid" id="articlesGrid">
+        <!-- Rendered dynamically by app.js -->
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading production technical articles...</p>
+        </div>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="pagination-container" id="paginationContainer" style="display: none;">
+        <button class="pagination-btn" id="prevPageBtn" disabled>Previous</button>
+        <span class="pagination-info" id="paginationInfo">Page 1 of 1</span>
+        <button class="pagination-btn" id="nextPageBtn" disabled>Next</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Full Article Reader Modal -->
+  <div class="modal-backdrop" id="readerModal">
+    <div class="reader-modal-dialog">
+      <div class="reader-sticky-top">
+        <button class="back-pill-btn" id="closeReaderBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Back to Overview
+        </button>
+        <div class="reader-header-actions">
+          <button class="action-pill-btn" id="readerMarkdownExportBtn" title="Export as Markdown (Day 4)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export .MD
+          </button>
+          <button class="like-counter-btn" id="readerLikeBtn">
+            <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span id="readerLikeCount">0</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="reader-body-scrollable">
+        <article class="reader-article" id="readerArticleContent">
+          <!-- Populated by JS -->
+        </article>
+
+        <!-- Reader Comments / Discussions Section -->
+        <section class="reader-discussions">
+          <div class="discussions-header">
+            <h3>Peer Discussions (<span id="readerCommentsCount">0</span>)</h3>
+          </div>
+
+          <!-- Add Comment Form (or login prompt) -->
+          <div class="comment-composer-box" id="commentComposerContainer">
+            <!-- Dynamic: Form if logged in, call-to-action banner if guest -->
+          </div>
+
+          <!-- Comments List -->
+          <div class="comments-list" id="readerCommentsList">
+            <!-- Dynamic list of comments -->
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal: Sign In / Create Account -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-card">
+      <button class="modal-close-btn" id="closeAuthModalBtn">&times;</button>
+      
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLoginBtn">Sign In</button>
+        <button class="auth-tab" id="tabRegisterBtn">Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="loginUsername">Username or Email</label>
+          <input type="text" id="loginUsername" placeholder="e.g. dr_elena or user@domain.com" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required>
+        </div>
+        <div class="form-error" id="loginErrorMsg"></div>
+        <button type="submit" class="primary-btn w-full">Sign In to NexusAI</button>
+        <div class="demo-credentials-box">
+          <small><strong>Demo Accounts:</strong><br>
+            • Admin: <code>admin</code> / <code>Admin@123</code><br>
+            • Author: <code>dr_elena</code> / <code>Author@123</code><br>
+            • Reader: <code>alex_reader</code> / <code>Reader@123</code>
+          </small>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="auth-form" style="display: none;">
+        <div class="form-group">
+          <label for="regUsername">Username</label>
+          <input type="text" id="regUsername" placeholder="alphanumeric, min 3 chars" required minlength="3">
+        </div>
+        <div class="form-group">
+          <label for="regFullName">Full Name</label>
+          <input type="text" id="regFullName" placeholder="e.g. Priya Sharma" required>
+        </div>
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <input type="email" id="regEmail" placeholder="name@company.com" required>
+        </div>
+        <div class="form-group">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" placeholder="min 6 characters" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label for="regRole">Platform Role (Day 5 RBAC)</label>
+          <select id="regRole" class="custom-select">
+            <option value="AUTHOR">Author (Can author, edit & manage own articles)</option>
+            <option value="READER">Reader (Can browse, like & participate in comments)</option>
+          </select>
+        </div>
+        <div class="form-error" id="registerErrorMsg"></div>
+        <button type="submit" class="primary-btn w-full">Create Account & Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create / Edit Article Studio Modal -->
+  <div class="modal-backdrop" id="editorModal">
+    <div class="editor-modal-dialog">
+      <div class="editor-header">
+        <h3 id="editorModalTitle">Author Studio: New Technical Article</h3>
+        <button class="modal-close-btn" id="closeEditorModalBtn">&times;</button>
+      </div>
+
+      <form id="postEditorForm" class="editor-form">
+        <input type="hidden" id="editPostId" value="">
+
+        <div class="editor-grid-row">
+          <div class="form-group flex-2">
+            <label for="postTitle">Article Title</label>
+            <input type="text" id="postTitle" placeholder="e.g. Distributed LLM Serving with PagedAttention" required minlength="5">
+          </div>
+          <div class="form-group flex-1">
+            <label for="postCategory">Category</label>
+            <select id="postCategory" class="custom-select" required>
+              <option value="Vector Search & RAG">Vector Search & RAG</option>
+              <option value="LLM Infrastructure">LLM Infrastructure</option>
+              <option value="Lakehouse & Big Data">Lakehouse & Big Data</option>
+              <option value="Stream Processing">Stream Processing</option>
+              <option value="MLOps & Platform">MLOps & Platform</option>
+              <option value="Data Engineering">Data Engineering</option>
+              <option value="Model Optimization">Model Optimization</option>
+              <option value="AI Ops & Observability">AI Ops & Observability</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="editor-grid-row">
+          <div class="form-group flex-2">
+            <label for="postTags">Technical Tags (Comma separated)</label>
+            <input type="text" id="postTags" placeholder="e.g. vLLM, CUDA, Inference, PagedAttention">
+          </div>
+          <div class="form-group flex-1">
+            <label for="postReadTime">Estimated Read Time (Minutes)</label>
+            <input type="number" id="postReadTime" min="1" max="60" value="7">
+          </div>
+        </div>
+
+        <!-- Cover Image Upload / URL (Day 4 File Uploads) -->
+        <div class="form-group">
+          <label>Cover Image (Upload file or paste URL)</label>
+          <div class="cover-upload-row">
+            <input type="url" id="postCoverUrl" placeholder="https://images.unsplash.com/..." class="flex-2">
+            <label class="file-upload-btn flex-1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              Upload Image
+              <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
+            </label>
+          </div>
+          <small class="form-hint" id="uploadStatusText">Supported formats: JPEG, PNG, WebP (Max 5MB)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="postExcerpt">Executive Summary / Excerpt (Displayed on panel card)</label>
+          <textarea id="postExcerpt" rows="2" placeholder="Brief technical summary (10-500 characters)..." required minlength="10" maxlength="500"></textarea>
+        </div>
+
+        <!-- Content Editor with Live Preview Tab -->
+        <div class="content-editor-wrapper">
+          <div class="editor-subtabs">
+            <button type="button" class="subtab-btn active" id="editorWriteTabBtn">Markdown Editor</button>
+            <button type="button" class="subtab-btn" id="editorPreviewTabBtn">Live Preview</button>
+            <button type="button" class="ai-assist-btn" id="aiAssistBtn" title="Analyze draft with External AI Service (Day 2)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              AI Draft Assistant
+            </button>
+          </div>
+
+          <div id="editorWritePane">
+            <textarea id="postContent" rows="14" placeholder="Write full technical article in Markdown... Supports headings, code blocks, tables, lists." required minlength="20"></textarea>
+          </div>
+
+          <div id="editorPreviewPane" class="markdown-preview-pane" style="display: none;">
+            <!-- Live preview parsed content -->
+          </div>
+        </div>
+
+        <div class="form-error" id="editorErrorMsg"></div>
+
+        <div class="editor-actions">
+          <button type="button" class="secondary-btn" id="cancelEditorBtn">Cancel</button>
+          <button type="submit" class="primary-btn" id="savePostBtn">Publish Article</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Articles Management Modal -->
+  <div class="modal-backdrop" id="myPostsModal">
+    <div class="modal-card wide">
+      <div class="modal-header-row">
+        <div>
+          <h3>My Published Articles</h3>
+          <p class="modal-subtext">Manage, update, or remove your technical papers.</p>
+        </div>
+        <button class="modal-close-btn" id="closeMyPostsModalBtn">&times;</button>
+      </div>
+
+      <div class="my-posts-list" id="myPostsList">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Observability & System Health Modal (Day 5 Deliverable) -->
+  <div class="modal-backdrop" id="systemModal">
+    <div class="modal-card wide">
+      <div class="modal-header-row">
+        <div class="brand-group">
+          <div class="status-indicator-badge">UP</div>
+          <div>
+            <h3>System Telemetry & Observability</h3>
+            <p class="modal-subtext">Live health checks, runtime metrics, and security audit logs.</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeSystemModalBtn">&times;</button>
+      </div>
+
+      <div class="telemetry-grid">
+        <div class="metric-card">
+          <span class="metric-label">Service Health</span>
+          <span class="metric-value status-good" id="metricHealthStatus">UP</span>
+          <span class="metric-desc" id="metricDbStatus">Database: healthy (SQLite WAL)</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Uptime</span>
+          <span class="metric-value" id="metricUptime">0s</span>
+          <span class="metric-desc">Continuous operation</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Total Requests</span>
+          <span class="metric-value" id="metricReqCount">0</span>
+          <span class="metric-desc" id="metricAvgLatency">Avg latency: 0.00ms</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Total Articles</span>
+          <span class="metric-value" id="metricPostsCount">8</span>
+          <span class="metric-desc">Distributed across 8 domains</span>
+        </div>
+      </div>
+
+      <div class="audit-logs-section">
+        <h4>Recent Security & Operation Audit Trail (Day 5)</h4>
+        <div class="audit-logs-table-wrapper">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Event Action</th>
+                <th>Principal / User</th>
+                <th>Resource</th>
+                <th>Timestamp</th>
+                <th>Client IP</th>
+              </tr>
+            </thead>
+            <tbody id="auditLogsBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-brand-col">
+        <div class="brand-group">
+          <div class="brand-logo-icon small">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          </div>
+          <span class="brand-title">Nexus<span class="gradient-text">AI</span></span>
+        </div>
+        <p class="footer-desc">
+          Production-Grade AI Engineering Bootcamp • Week 1 Assignment Solution.<br>
+          Built with FastAPI Layered Architecture, SQLite WAL, JWT RBAC, and High-Performance Web Standards.
+        </p>
+      </div>
+
+      <div class="footer-links-col">
+        <h4>System Architecture</h4>
+        <ul>
+          <li><a href="/docs" target="_blank">OpenAPI Swagger UI</a></li>
+          <li><a href="/redoc" target="_blank">ReDoc Specification</a></li>
+          <li><a href="/health" target="_blank">Health Check JSON</a></li>
+          <li><a href="/metrics" target="_blank">Metrics Telemetry JSON</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-links-col">
+        <h4>Data Exports</h4>
+        <ul>
+          <li><a href="/api/v1/export/posts/csv" download>Catalog CSV Export</a></li>
+          <li><a href="/api/v1/export/posts/json" download>Articles JSON Dataset</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 NexusAI Journal. Designed for Production-Grade AI Engineering.</p>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
