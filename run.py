@@ -9,7 +9,7 @@ from seed_data import seed_database
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("NexusAI — Production-Grade Engineering Platform")
+    print("LATENT — Production-Grade AI & Systems Engineering Platform")
     print("Bootcamp Week 1 Deliverable: User-Specific Publication Platform")
     print("=" * 70)
     
