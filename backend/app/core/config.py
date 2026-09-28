@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 class Settings:
     PROJECT_NAME: str = "LATENT — Production AI & Systems Engineering Journal"
