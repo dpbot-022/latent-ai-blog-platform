@@ -1,6 +1,6 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from backend.app.models.user import User, UserRole
 
 class UserRepository:
@@ -10,16 +10,19 @@ class UserRepository:
 
     @staticmethod
     def get_by_username(db: Session, username: str) -> Optional[User]:
-        return db.query(User).filter(User.username == username).first()
+        clean = username.strip().lower()
+        return db.query(User).filter(func.lower(User.username) == clean).first()
 
     @staticmethod
     def get_by_email(db: Session, email: str) -> Optional[User]:
-        return db.query(User).filter(User.email == email).first()
+        clean = email.strip().lower()
+        return db.query(User).filter(func.lower(User.email) == clean).first()
 
     @staticmethod
     def get_by_username_or_email(db: Session, identifier: str) -> Optional[User]:
+        clean = identifier.strip().lower()
         return db.query(User).filter(
-            or_(User.username == identifier, User.email == identifier)
+            or_(func.lower(User.username) == clean, func.lower(User.email) == clean)
         ).first()
 
     @staticmethod

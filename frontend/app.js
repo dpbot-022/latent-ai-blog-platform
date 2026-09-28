@@ -264,11 +264,26 @@ async function initAuth() {
   if (state.token) {
     try {
       state.user = await apiRequest("/api/v1/auth/me");
+      syncUserState();
     } catch (err) {
       logout();
     }
+  } else {
+    syncUserState();
   }
   renderAuthNav();
+}
+
+function syncUserState() {
+  if (state.user) {
+    const histKey = `latent_history_ids_${state.user.id}`;
+    const savedKey = `latent_saved_ids_${state.user.id}`;
+    state.userReadingHistory = JSON.parse(localStorage.getItem(histKey) || "[]");
+    state.userSavedPostIds = new Set(JSON.parse(localStorage.getItem(savedKey) || localStorage.getItem("latent_saved_ids") || "[]"));
+  } else {
+    state.userReadingHistory = [];
+    state.userSavedPostIds = new Set();
+  }
 }
 
 function renderAuthNav() {
@@ -400,6 +415,8 @@ function logout() {
   });
   state.token = null;
   state.user = null;
+  state.userReadingHistory = [];
+  state.userSavedPostIds = new Set();
   localStorage.removeItem("latent_token");
   localStorage.removeItem("nexus_token");
   renderAuthNav();
@@ -576,6 +593,11 @@ function renderStaffPicks(picks) {
 }
 
 function toggleBookmark(postId, btnElement) {
+  if (!state.user) {
+    showToast("Please sign in or create an account to save stories.", "info");
+    openAuthModal("login");
+    return;
+  }
   const pId = parseInt(postId);
   const isSaved = state.userSavedPostIds.has(pId);
   const postObj = state.articles.find(p => p.id === pId) || state.currentReadingPost;
@@ -596,6 +618,8 @@ function toggleBookmark(postId, btnElement) {
       post_id: pId
     });
   }
+  const userSavedKey = `latent_saved_ids_${state.user.id}`;
+  localStorage.setItem(userSavedKey, JSON.stringify([...state.userSavedPostIds]));
   localStorage.setItem("latent_saved_ids", JSON.stringify([...state.userSavedPostIds]));
   if (state.currentReadingPost && state.currentReadingPost.id === pId) {
     updateReaderBookmarkState();
@@ -708,10 +732,15 @@ async function openReaderModal(postIdOrSlug) {
     state.currentReadingPost = post;
     state.allArticlesMap.set(post.id, post);
 
-    // Track Reading History
-    if (!state.userReadingHistory.includes(post.id)) {
-      state.userReadingHistory.unshift(post.id);
-      localStorage.setItem("latent_history_ids", JSON.stringify(state.userReadingHistory.slice(0, 50)));
+    // Track Reading History for authenticated users only
+    if (state.user) {
+      const histKey = `latent_history_ids_${state.user.id}`;
+      let hist = JSON.parse(localStorage.getItem(histKey) || "[]");
+      if (!hist.includes(post.id)) {
+        hist.unshift(post.id);
+        localStorage.setItem(histKey, JSON.stringify(hist.slice(0, 50)));
+      }
+      state.userReadingHistory = hist;
     }
 
     const pubDate = new Date(post.created_at).toLocaleDateString("en-US", {
@@ -898,6 +927,18 @@ window.deleteComment = async function(commentId) {
 // View 2: Library (Saved Lists, Liked Posts, Reading History)
 // ============================================================================
 function renderLibraryView(subtab = "saved") {
+  if (!state.user) {
+    dom.libraryContent.innerHTML = `
+      <div class="library-empty-box" style="padding: 3.5rem 2rem;">
+        <div style="font-size: 2.75rem; margin-bottom: 1rem;">📚</div>
+        <h3>Sign in to access your Library</h3>
+        <p>Your saved bookmarks, liked posts, and reading history are securely tied to your personal account.</p>
+        <button class="primary-btn" onclick="openAuthModal('login')">Sign In to Latent</button>
+      </div>
+    `;
+    return;
+  }
+
   // Update subtab buttons
   document.querySelectorAll("#viewLibrary .feed-tab").forEach(tab => {
     if (tab.getAttribute("data-libtab") === subtab) tab.classList.add("active");
@@ -910,7 +951,7 @@ function renderLibraryView(subtab = "saved") {
   } else if (subtab === "liked") {
     targetIds = [...state.userLikedPostIds];
   } else if (subtab === "history") {
-    targetIds = state.userReadingHistory;
+    targetIds = state.userReadingHistory || [];
   }
 
   const posts = targetIds.map(id => state.allArticlesMap.get(id)).filter(Boolean);
@@ -1094,6 +1135,24 @@ window.deleteMyPost = async function(postId) {
 // View 5: Stats View (Monthly Analytics & Audit Trail)
 // ============================================================================
 async function renderStatsView() {
+  const authGate = document.getElementById("statsAuthGate");
+  const statsContent = document.getElementById("statsAuthorizedContainer");
+
+  if (!state.user) {
+    if (authGate) authGate.style.display = "block";
+    if (statsContent) statsContent.style.display = "none";
+    return;
+  }
+
+  if (authGate) authGate.style.display = "none";
+  if (statsContent) statsContent.style.display = "block";
+
+  // Hide or show the admin tab depending on role
+  const systemTabBtn = document.querySelector("#viewStats button[data-stattab='system']");
+  if (systemTabBtn) {
+    systemTabBtn.style.display = state.user.role === "ADMIN" ? "inline-flex" : "none";
+  }
+
   try {
     const [health, metrics] = await Promise.all([
       apiRequest("/health"),
@@ -1113,20 +1172,21 @@ async function renderStatsView() {
       auditItems = auditRes.items;
     } catch (_) {
       auditItems = [
-        { action: "SYSTEM_INIT", username: "system", resource_type: "engine", created_at: new Date().toISOString(), ip_address: "127.0.0.1" },
-        { action: "TELEMETRY_PROBE", username: "healthcheck", resource_type: "probe", created_at: new Date().toISOString(), ip_address: "127.0.0.1" }
+        { action: "USER_LOGIN", username: state.user.username, resource_type: "auth", created_at: new Date().toISOString(), ip_address: "127.0.0.1" }
       ];
     }
 
-    dom.statsAuditTableBody.innerHTML = auditItems.map(log => `
-      <tr>
-        <td><code>${escapeHtml(log.action)}</code></td>
-        <td>${escapeHtml(log.username || 'anonymous')}</td>
-        <td>${escapeHtml(log.resource_type || 'post')}</td>
-        <td>${new Date(log.created_at).toLocaleTimeString()}</td>
-        <td><code>${escapeHtml(log.ip_address || '127.0.0.1')}</code></td>
-      </tr>
-    `).join("");
+    if (dom.statsAuditTableBody) {
+      dom.statsAuditTableBody.innerHTML = auditItems.map(log => `
+        <tr>
+          <td><code>${escapeHtml(log.action)}</code></td>
+          <td>${escapeHtml(log.username || 'anonymous')}</td>
+          <td>${escapeHtml(log.resource_type || 'post')}</td>
+          <td>${new Date(log.created_at).toLocaleTimeString()}</td>
+          <td><code>${escapeHtml(log.ip_address || '127.0.0.1')}</code></td>
+        </tr>
+      `).join("");
+    }
 
   } catch (err) {
     console.error("Error loading stats:", err);
@@ -1556,6 +1616,7 @@ if (dom.otpVerifyForm) {
       state.token = res.access_token;
       state.user = res.user;
       localStorage.setItem("latent_token", state.token);
+      syncUserState();
       closeAuthModal();
       renderAuthNav();
       showToast(`🎉 Verification complete! Welcome to Latent, ${state.user.full_name || state.user.username}!`, "success");
@@ -1601,6 +1662,7 @@ dom.loginForm.addEventListener("submit", async (e) => {
     state.token = res.access_token;
     state.user = res.user;
     localStorage.setItem("latent_token", state.token);
+    syncUserState();
     closeAuthModal();
     renderAuthNav();
     showToast(`Welcome back, ${state.user.full_name || state.user.username}!`, "success");

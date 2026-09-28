@@ -263,3 +263,40 @@ def test_data_exports():
     assert md_res.status_code == 200
     assert "text/markdown" in md_res.headers["content-type"]
     assert "---" in md_res.text
+
+def test_user_registration_and_first_login_otp_flow():
+    """Verify new user registration followed by first-time OTP verification."""
+    # 1. Register new user
+    reg_res = client.post("/api/v1/auth/register", json={
+        "username": "fresh_user",
+        "email": "fresh.user@example.com",
+        "password": "Password123!",
+        "full_name": "Fresh Test User",
+        "role": "AUTHOR"
+    })
+    assert reg_res.status_code == 201
+    reg_data = reg_res.json()
+    assert reg_data["username"] == "fresh_user"
+    assert reg_data["is_verified"] is False
+
+    # 2. Login as new user - triggers OTP requirement
+    login_res = client.post("/api/v1/auth/login", json={
+        "username": "fresh_user",
+        "password": "Password123!"
+    })
+    assert login_res.status_code == 200
+    login_data = login_res.json()
+    assert login_data.get("requires_otp") is True
+    assert "demo_otp_hint" in login_data
+    otp = login_data["demo_otp_hint"]
+
+    # 3. Complete OTP verification
+    verify_res = client.post("/api/v1/auth/verify-otp", json={
+        "username": "fresh_user",
+        "otp_code": otp
+    })
+    assert verify_res.status_code == 200
+    verify_data = verify_res.json()
+    assert "access_token" in verify_data
+    assert verify_data["user"]["is_verified"] is True
+

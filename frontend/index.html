@@ -275,12 +275,21 @@
           <p class="view-subtitle">September 2026 • Updated in real time</p>
         </div>
 
-        <div class="feed-tabs-header">
-          <div class="feed-tabs-list">
-            <button class="feed-tab active" data-stattab="stories">Story & Audience Analytics</button>
-            <button class="feed-tab" data-stattab="system">Security & Compliance Trail (Admin/DevOps)</button>
-          </div>
+        <!-- Auth Gate for Unauthenticated Users -->
+        <div id="statsAuthGate" class="library-empty-box" style="display: none; padding: 3.5rem 2rem;">
+          <div style="font-size: 2.75rem; margin-bottom: 1rem;">📊</div>
+          <h3>Sign in to view your Analytics & Readership</h3>
+          <p>Track real-time story presentations, views, average read ratios, and clap engagement for your account.</p>
+          <button class="primary-btn" onclick="openAuthModal('login')">Sign In to Latent</button>
         </div>
+
+        <div id="statsAuthorizedContainer">
+          <div class="feed-tabs-header">
+            <div class="feed-tabs-list">
+              <button class="feed-tab active" data-stattab="stories">Story & Audience Analytics</button>
+              <button class="feed-tab" data-stattab="system">Security & Compliance Trail (Admin/DevOps)</button>
+            </div>
+          </div>
 
         <!-- Section 1: Stories & Audience Analytics (Default View for Authors/Readers) -->
         <div id="statsStoriesSection">
@@ -373,7 +382,7 @@
             </table>
           </div>
         </div>
-
+      </div>
       </section>
 
     </main>
