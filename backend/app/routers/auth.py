@@ -50,7 +50,7 @@ def login(
             username=user.username,
             email_masked=EmailService.mask_email(user.email),
             message="First-time login detected. A 6-digit verification code has been dispatched to your email.",
-            dev_otp_hint=None
+            dev_otp_hint=otp
         )
 
     # Already verified: direct token issuance
@@ -92,7 +92,7 @@ def resend_otp(
     return {
         "status": "success",
         "message": "A fresh 6-digit verification code has been sent to your email.",
-        "dev_otp_hint": None
+        "dev_otp_hint": otp
     }
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
