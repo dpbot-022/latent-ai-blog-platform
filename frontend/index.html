@@ -422,35 +422,11 @@
       <!-- Who to Follow -->
       <div class="sidebar-widget">
         <h4 class="widget-title">Who to Follow</h4>
-        <div class="who-to-follow-list">
-          <div class="follow-user-row">
-            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80" class="follow-avatar" alt="Elena">
-            <div class="follow-info">
-              <span class="follow-name">Dr. Elena Vance</span>
-              <span class="follow-desc">Staff AI Engineer • Dense Retrieval</span>
-            </div>
-            <button class="follow-btn" data-author="dr_elena" data-author-name="Dr. Elena Vance">Follow</button>
-          </div>
-
-          <div class="follow-user-row">
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" class="follow-avatar" alt="Marcus">
-            <div class="follow-info">
-              <span class="follow-name">Marcus Chen</span>
-              <span class="follow-desc">Principal GPU Systems Architect</span>
-            </div>
-            <button class="follow-btn" data-author="marcus_chen" data-author-name="Marcus Chen">Follow</button>
-          </div>
-
-          <div class="follow-user-row">
-            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80" class="follow-avatar" alt="Sarah">
-            <div class="follow-info">
-              <span class="follow-name">Sarah Jenkins</span>
-              <span class="follow-desc">Lead Data Architect • Apache Iceberg</span>
-            </div>
-            <button class="follow-btn" data-author="sarah_jenkins" data-author-name="Sarah Jenkins">Follow</button>
-          </div>
+        <div class="who-to-follow-list" id="whoToFollowList">
+          <!-- Dynamically populated from /api/v1/posts/authors/published -->
         </div>
       </div>
+
 
       <!-- Mini Footer -->
       <div class="right-sidebar-footer">
@@ -571,16 +547,11 @@
             <input type="text" maxlength="1" class="otp-digit" id="otp5" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <!-- Dev Terminal / Demo Simulation Helper -->
-          <div class="demo-otp-banner" id="demoOtpBanner">
-            <div class="demo-otp-banner-header">
-              <span class="demo-otp-tag">⚡ Email Simulator / Dev Hint</span>
-              <button type="button" class="copy-otp-chip" id="autoFillOtpBtn">Auto-fill Code</button>
-            </div>
-            <div class="demo-otp-code-line">
-              <span>OTP Code: <strong id="otpDemoCodeValue">------</strong></span>
-            </div>
-            <small class="demo-otp-note">In production, dispatched via SMTP service. Dispatched email is logged to terminal.</small>
+          <div class="otp-security-notice">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Please check your inbox (including Spam/Junk) for your 6-digit verification code.</span>
           </div>
 
           <div class="form-error" id="otpErrorMsg" style="display: none;"></div>
@@ -680,21 +651,57 @@
         </div>
 
         <div class="form-group">
-          <label>Cover Image (Upload file or paste image URL)</label>
-          <div class="cover-upload-row">
-            <input type="url" id="postCoverUrl" placeholder="https://images.unsplash.com/..." class="flex-2">
-            <label class="file-upload-btn flex-1">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              Upload Image
-              <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
-            </label>
+          <label>Cover Image (Upload File)</label>
+          <input type="hidden" id="postCoverUrl" value="">
+          <input type="file" id="coverFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
+          
+          <div class="cover-upload-dropzone" id="coverUploadDropzone">
+            <!-- Empty / Prompt State -->
+            <div class="upload-dropzone-prompt" id="uploadDropzonePrompt">
+              <div class="upload-icon-circle">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <div class="upload-prompt-text">
+                <span class="upload-prompt-main"><strong>Click to upload cover image</strong> or drag and drop</span>
+                <span class="upload-prompt-sub">PNG, JPG, WebP, or GIF (max 5MB)</span>
+              </div>
+            </div>
+
+            <!-- Preview State (when image is uploaded or editing post with existing image) -->
+            <div class="cover-preview-wrapper" id="coverPreviewWrapper" style="display: none;">
+              <img src="" id="coverImagePreview" alt="Cover Preview" class="cover-preview-img">
+              <div class="cover-preview-overlay">
+                <div class="cover-preview-meta">
+                  <span id="coverImageName" class="cover-preview-name">cover.png</span>
+                  <span id="coverImageSize" class="cover-preview-size">Uploaded</span>
+                </div>
+                <div class="cover-preview-actions">
+                  <button type="button" class="btn-change-image" id="changeCoverBtn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Change Image
+                  </button>
+                  <button type="button" class="btn-remove-image" id="removeCoverBtn" title="Remove cover image">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <small class="form-hint" id="uploadStatusText">Supported formats: JPEG, PNG, WebP (Max 5MB)</small>
+          <small class="form-hint" id="uploadStatusText">Supported formats: PNG, JPEG, WebP, GIF (Max 5MB)</small>
         </div>
+
 
         <div class="form-group">
           <label for="postExcerpt">Story Excerpt</label>

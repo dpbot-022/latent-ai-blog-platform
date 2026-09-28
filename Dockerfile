@@ -1,5 +1,5 @@
 # ==============================================================================
-# Production Dockerfile for NexusAI Platform
+# Production Dockerfile for LATENT Platform
 # Implements multi-stage best practices, non-root user, and health check probes
 # ==============================================================================
 FROM python:3.12-slim AS runtime

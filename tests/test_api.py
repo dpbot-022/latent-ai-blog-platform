@@ -5,11 +5,12 @@ from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
 from backend.app.core.database import Base, get_db
+from backend.app.models.user import User
 from backend.app.main import app
 from seed_data import seed_database
 
 # 1. Test Database Isolation: Use isolated SQLite file for tests
-TEST_DB_FILE = "test_nexusai.db"
+TEST_DB_FILE = "test_latent.db"
 TEST_DATABASE_URL = f"sqlite:///./{TEST_DB_FILE}"
 
 test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -108,9 +109,15 @@ def test_auth_first_time_login_otp_filter():
     assert data.get("requires_otp") is True
     assert data.get("username") == "new_engineer"
     assert "@" in data.get("email_masked")
-    assert "demo_otp_hint" in data
-    otp_code = data["demo_otp_hint"]
-    assert len(otp_code) == 6
+    assert "demo_otp_hint" not in data  # Production security: never leaked to client
+
+    # Retrieve dispatched OTP securely from test DB
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.username == "new_engineer").first()
+    assert user is not None
+    otp_code = user.otp_code
+    db.close()
+    assert otp_code is not None and len(otp_code) == 6
 
     # 2. Attempt verification with wrong OTP code -> 400
     wrong_verify = client.post("/api/v1/auth/verify-otp", json={
@@ -253,7 +260,7 @@ def test_data_exports():
     csv_res = client.get("/api/v1/export/posts/csv")
     assert csv_res.status_code == 200
     assert "text/csv" in csv_res.headers["content-type"]
-    assert "attachment; filename=nexusai_articles_catalog.csv" in csv_res.headers["content-disposition"]
+    assert "attachment; filename=latent_articles_catalog.csv" in csv_res.headers["content-disposition"]
     assert "ID,Title,Slug,Category,Author" in csv_res.text
 
     # Markdown Export
@@ -279,7 +286,7 @@ def test_user_registration_and_first_login_otp_flow():
     assert reg_data["username"] == "fresh_user"
     assert reg_data["is_verified"] is False
 
-    # 2. Login as new user - triggers OTP requirement
+    # 2. Login as new user - triggers OTP requirement without leaking hint
     login_res = client.post("/api/v1/auth/login", json={
         "username": "fresh_user",
         "password": "Password123!"
@@ -287,8 +294,14 @@ def test_user_registration_and_first_login_otp_flow():
     assert login_res.status_code == 200
     login_data = login_res.json()
     assert login_data.get("requires_otp") is True
-    assert "demo_otp_hint" in login_data
-    otp = login_data["demo_otp_hint"]
+    assert "demo_otp_hint" not in login_data
+
+    # Fetch OTP from test db
+    db = TestingSessionLocal()
+    user = db.query(User).filter(User.username == "fresh_user").first()
+    otp = user.otp_code
+    db.close()
+    assert otp is not None and len(otp) == 6
 
     # 3. Complete OTP verification
     verify_res = client.post("/api/v1/auth/verify-otp", json={
@@ -299,4 +312,20 @@ def test_user_registration_and_first_login_otp_flow():
     verify_data = verify_res.json()
     assert "access_token" in verify_data
     assert verify_data["user"]["is_verified"] is True
+
+def test_published_authors_follow_list():
+    """Verify that any user who has published an article appears in the published authors follow list."""
+    res = client.get("/api/v1/posts/authors/published")
+    assert res.status_code == 200
+    authors = res.json()
+    assert isinstance(authors, list)
+    assert len(authors) >= 1
+    
+    # Verify author schema fields
+    first_author = authors[0]
+    assert "username" in first_author
+    assert "full_name" in first_author
+    assert "articles_count" in first_author
+    assert first_author["articles_count"] >= 1
+
 

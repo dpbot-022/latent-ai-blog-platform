@@ -33,6 +33,16 @@ class UserAuthorSnippet(BaseModel):
     role: UserRole
     model_config = ConfigDict(from_attributes=True)
 
+class PublishedAuthorResponse(BaseModel):
+    id: int
+    username: str
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: UserRole
+    articles_count: int = 1
+    model_config = ConfigDict(from_attributes=True)
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -43,7 +53,6 @@ class OTPRequiredResponse(BaseModel):
     username: str
     email_masked: str
     message: str
-    demo_otp_hint: Optional[str] = None
 
 class OTPVerifyRequest(BaseModel):
     username: str

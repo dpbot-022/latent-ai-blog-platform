@@ -45,7 +45,7 @@ class ExternalAIService:
                 summary = f"Synthesizes key concepts of '{title}' focusing on architecture, trade-offs, and scalability."
                 
                 return {
-                    "provider": "Mock-NexusAI-Inference-Engine-v2",
+                    "provider": "Mock-LATENT-Inference-Engine-v2",
                     "status": "success",
                     "attempt": attempt,
                     "generated_summary": summary,

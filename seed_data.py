@@ -32,9 +32,9 @@ def seed_database(custom_engine=None, custom_session_maker=None):
         # 1. Create Users
         admin_user = User(
             username="admin",
-            email="admin@nexusai.io",
+            email="admin@latent.ai",
             hashed_password=hash_password("Admin@123"),
-            full_name="Nexus System Administrator",
+            full_name="Platform System Administrator",
             bio="Platform administrator overseeing production data pipelines and cluster telemetry.",
             avatar_url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
             role=UserRole.ADMIN,
@@ -43,7 +43,7 @@ def seed_database(custom_engine=None, custom_session_maker=None):
 
         elena = User(
             username="dr_elena",
-            email="elena.vance@nexusai.io",
+            email="elena.vance@latent.ai",
             hashed_password=hash_password("Author@123"),
             full_name="Dr. Elena Vance",
             bio="Staff AI Research Engineer specializing in dense retrieval, RAG, and neuro-symbolic search.",
@@ -54,7 +54,7 @@ def seed_database(custom_engine=None, custom_session_maker=None):
 
         marcus = User(
             username="marcus_chen",
-            email="marcus.chen@nexusai.io",
+            email="marcus.chen@latent.ai",
             hashed_password=hash_password("Author@123"),
             full_name="Marcus Chen",
             bio="Principal GPU Systems Architect. Optimizing CUDA kernels, Triton compiler passes, and high-throughput LLM serving.",
@@ -65,7 +65,7 @@ def seed_database(custom_engine=None, custom_session_maker=None):
 
         sarah = User(
             username="sarah_jenkins",
-            email="sarah.j@nexusai.io",
+            email="sarah.j@latent.ai",
             hashed_password=hash_password("Author@123"),
             full_name="Sarah Jenkins",
             bio="Lead Data Architect focusing on petabyte-scale lakehouses, Apache Iceberg, and distributed query engines.",
@@ -73,6 +73,7 @@ def seed_database(custom_engine=None, custom_session_maker=None):
             role=UserRole.AUTHOR,
             is_verified=True
         )
+
 
         reader_user = User(
             username="alex_reader",
@@ -646,7 +647,7 @@ We standardize AI agent traces using OpenTelemetry Spans:
 ```python
 from opentelemetry import trace
 
-tracer = trace.get_tracer("nexusai.agent.tracer")
+tracer = trace.get_tracer("latent.agent.tracer")
 
 def execute_agent_tool_step(tool_name: str, arguments: dict):
     with tracer.start_as_current_span(f"gen_ai.tool.{tool_name}") as span:

@@ -11,6 +11,7 @@ from backend.app.models.user import User, UserRole
 from backend.app.schemas.post import (
     PostCreate, PostUpdate, PostSummaryResponse, PostDetailResponse, PostPaginationResponse
 )
+from backend.app.schemas.user import PublishedAuthorResponse
 from backend.app.repositories.post_repo import PostRepository
 from backend.app.services.post_service import PostService
 
@@ -73,6 +74,38 @@ def get_my_posts(
         is_published=None  # include drafts and published
     )
     return [PostService.to_summary_response(p) for p in posts]
+
+@router.get("/authors/published", response_model=List[PublishedAuthorResponse], status_code=status.HTTP_200_OK)
+def get_published_authors(db: Session = Depends(get_db)):
+    """
+    Public Endpoint: Returns list of authors who have published at least one blog.
+    Powers the dynamic 'Who to Follow' recommendations.
+    """
+    from sqlalchemy import func
+    from backend.app.models.post import Post
+
+    authors_query = (
+        db.query(User, func.count(Post.id).label("post_count"))
+        .join(Post, Post.author_id == User.id)
+        .filter(Post.is_published == True)
+        .group_by(User.id)
+        .order_by(func.count(Post.id).desc(), User.id.desc())
+        .all()
+    )
+    results = []
+    for user, count in authors_query:
+        results.append(
+            PublishedAuthorResponse(
+                id=user.id,
+                username=user.username,
+                full_name=user.full_name or user.username,
+                bio=user.bio or "AI & Systems Researcher",
+                avatar_url=user.avatar_url or f"https://api.dicebear.com/7.x/bottts/svg?seed={user.username}",
+                role=user.role,
+                articles_count=count
+            )
+        )
+    return results
 
 @router.get("/{id_or_slug}", response_model=PostDetailResponse)
 def get_post(

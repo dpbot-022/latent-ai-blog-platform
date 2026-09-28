@@ -116,8 +116,6 @@ const dom = {
   otpTargetEmail: document.getElementById("otpTargetEmail"),
   otpVerifyForm: document.getElementById("otpVerifyForm"),
   otpDigits: [0, 1, 2, 3, 4, 5].map(i => document.getElementById("otp" + i)),
-  otpDemoCodeValue: document.getElementById("otpDemoCodeValue"),
-  autoFillOtpBtn: document.getElementById("autoFillOtpBtn"),
   otpErrorMsg: document.getElementById("otpErrorMsg"),
   otpCountdownTimer: document.getElementById("otpCountdownTimer"),
   submitOtpBtn: document.getElementById("submitOtpBtn"),
@@ -136,6 +134,14 @@ const dom = {
   postReadTime: document.getElementById("postReadTime"),
   postCoverUrl: document.getElementById("postCoverUrl"),
   coverFileInput: document.getElementById("coverFileInput"),
+  coverUploadDropzone: document.getElementById("coverUploadDropzone"),
+  uploadDropzonePrompt: document.getElementById("uploadDropzonePrompt"),
+  coverPreviewWrapper: document.getElementById("coverPreviewWrapper"),
+  coverImagePreview: document.getElementById("coverImagePreview"),
+  coverImageName: document.getElementById("coverImageName"),
+  coverImageSize: document.getElementById("coverImageSize"),
+  changeCoverBtn: document.getElementById("changeCoverBtn"),
+  removeCoverBtn: document.getElementById("removeCoverBtn"),
   uploadStatusText: document.getElementById("uploadStatusText"),
   postExcerpt: document.getElementById("postExcerpt"),
   postContent: document.getElementById("postContent"),
@@ -146,8 +152,10 @@ const dom = {
   aiAssistBtn: document.getElementById("aiAssistBtn"),
   editorErrorMsg: document.getElementById("editorErrorMsg"),
 
+  whoToFollowList: document.getElementById("whoToFollowList"),
   toastContainer: document.getElementById("toastContainer")
 };
+
 
 // ============================================================================
 // Notification Toast System
@@ -458,6 +466,7 @@ async function loadArticles() {
       renderFeedList(state.articles);
     }
     renderStaffPicks(state.articles.slice(0, 3));
+    await renderWhoToFollowList();
     syncAllFollowButtons();
     dom.resultsCount.textContent = `Showing ${data.total} articles`;
 
@@ -1232,15 +1241,39 @@ function openEditorModal(post = null) {
     dom.postCategory.value = post.category;
     dom.postTags.value = post.tags || "";
     dom.postReadTime.value = post.read_time_minutes;
-    dom.postCoverUrl.value = post.cover_image || "";
     dom.postExcerpt.value = post.excerpt;
     dom.postContent.value = post.content;
+
+    // Existing cover image preview
+    if (post.cover_image) {
+      dom.postCoverUrl.value = post.cover_image;
+      dom.coverImagePreview.src = post.cover_image;
+      const cleanName = post.cover_image.split("/").pop() || "cover_image";
+      dom.coverImageName.textContent = cleanName.length > 25 ? cleanName.substring(0, 22) + "..." : cleanName;
+      dom.coverImageSize.textContent = "Current Cover";
+      dom.uploadDropzonePrompt.style.display = "none";
+      dom.coverPreviewWrapper.style.display = "flex";
+      dom.uploadStatusText.textContent = "Click 'Change Image' or drag a new file to replace.";
+      dom.uploadStatusText.className = "form-hint";
+    } else {
+      dom.postCoverUrl.value = "";
+      dom.coverImagePreview.src = "";
+      dom.uploadDropzonePrompt.style.display = "flex";
+      dom.coverPreviewWrapper.style.display = "none";
+      dom.uploadStatusText.textContent = "Supported formats: PNG, JPEG, WebP, GIF (Max 5MB)";
+      dom.uploadStatusText.className = "form-hint";
+    }
   } else {
     dom.editorModalTitle.textContent = "Write a story";
     dom.postEditorForm.reset();
     dom.editPostId.value = "";
     dom.postReadTime.value = 7;
-    dom.postCoverUrl.value = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
+    dom.postCoverUrl.value = "";
+    dom.coverImagePreview.src = "";
+    dom.uploadDropzonePrompt.style.display = "flex";
+    dom.coverPreviewWrapper.style.display = "none";
+    dom.uploadStatusText.textContent = "Supported formats: PNG, JPEG, WebP, GIF (Max 5MB)";
+    dom.uploadStatusText.className = "form-hint";
   }
 }
 
@@ -1271,12 +1304,35 @@ dom.editorPreviewTabBtn.addEventListener("click", () => {
   dom.editorPreviewPane.innerHTML = renderMarkdown(dom.postContent.value);
 });
 
-// Multipart Cover Image Upload
-dom.coverFileInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
+// Dedicated Cover Image File Upload Handler
+async function handleCoverFileUpload(file) {
   if (!file) return;
 
+  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  if (!validTypes.includes(file.type)) {
+    dom.uploadStatusText.textContent = "Invalid format. Please select PNG, JPG, WebP, or GIF.";
+    dom.uploadStatusText.className = "form-hint";
+    showToast("Invalid format. Allowed: PNG, JPG, WebP, GIF", "error");
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    dom.uploadStatusText.textContent = "File exceeds maximum size of 5MB.";
+    dom.uploadStatusText.className = "form-hint";
+    showToast("Image exceeds 5MB limit", "error");
+    return;
+  }
+
+  // Show immediate local preview
+  const localPreviewUrl = URL.createObjectURL(file);
+  dom.coverImagePreview.src = localPreviewUrl;
+  dom.coverImageName.textContent = file.name.length > 25 ? file.name.substring(0, 22) + "..." : file.name;
+  dom.coverImageSize.textContent = `${Math.round(file.size / 1024)} KB`;
+  dom.uploadDropzonePrompt.style.display = "none";
+  dom.coverPreviewWrapper.style.display = "flex";
   dom.uploadStatusText.textContent = `Uploading ${file.name}...`;
+  dom.uploadStatusText.className = "form-hint";
+
   const formData = new FormData();
   formData.append("file", file);
 
@@ -1286,13 +1342,84 @@ dom.coverFileInput.addEventListener("change", async (e) => {
       body: formData
     });
     dom.postCoverUrl.value = res.url;
+    dom.coverImagePreview.src = res.url;
     dom.uploadStatusText.textContent = `Uploaded successfully (${Math.round(res.size_bytes / 1024)} KB)`;
-    showToast("Cover image uploaded!", "success");
+    dom.uploadStatusText.className = "form-hint success";
+    showToast("Cover image uploaded successfully!", "success");
   } catch (err) {
     dom.uploadStatusText.textContent = `Upload failed: ${err.message}`;
-    showToast(err.message, "error");
+    dom.uploadStatusText.className = "form-hint";
+    showToast(`Upload failed: ${err.message}`, "error");
+    if (!dom.postCoverUrl.value) {
+      dom.uploadDropzonePrompt.style.display = "flex";
+      dom.coverPreviewWrapper.style.display = "none";
+    }
   }
-});
+}
+
+// Dropzone click triggers hidden file input
+if (dom.coverUploadDropzone) {
+  dom.coverUploadDropzone.addEventListener("click", (e) => {
+    if (e.target.closest("#changeCoverBtn") || e.target.closest("#removeCoverBtn")) return;
+    if (dom.uploadDropzonePrompt.style.display !== "none") {
+      dom.coverFileInput.click();
+    }
+  });
+
+  // Drag and drop listeners
+  ["dragenter", "dragover"].forEach(eventName => {
+    dom.coverUploadDropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dom.coverUploadDropzone.classList.add("dragover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(eventName => {
+    dom.coverUploadDropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dom.coverUploadDropzone.classList.remove("dragover");
+    });
+  });
+
+  dom.coverUploadDropzone.addEventListener("drop", (e) => {
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files[0]) {
+      handleCoverFileUpload(dt.files[0]);
+    }
+  });
+}
+
+// Change cover image button
+if (dom.changeCoverBtn) {
+  dom.changeCoverBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dom.coverFileInput.click();
+  });
+}
+
+// Remove cover image button
+if (dom.removeCoverBtn) {
+  dom.removeCoverBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dom.postCoverUrl.value = "";
+    dom.coverFileInput.value = "";
+    dom.coverImagePreview.src = "";
+    dom.uploadDropzonePrompt.style.display = "flex";
+    dom.coverPreviewWrapper.style.display = "none";
+    dom.uploadStatusText.textContent = "Supported formats: PNG, JPEG, WebP, GIF (Max 5MB)";
+    dom.uploadStatusText.className = "form-hint";
+  });
+}
+
+// File picker change
+if (dom.coverFileInput) {
+  dom.coverFileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleCoverFileUpload(file);
+  });
+}
 
 // AI Draft Assistant
 dom.aiAssistBtn.addEventListener("click", async () => {
@@ -1329,7 +1456,7 @@ dom.postEditorForm.addEventListener("submit", async (e) => {
     category: dom.postCategory.value,
     tags: dom.postTags.value.trim(),
     read_time_minutes: parseInt(dom.postReadTime.value) || 5,
-    cover_image: dom.postCoverUrl.value.trim(),
+    cover_image: dom.postCoverUrl.value.trim() || undefined,
     excerpt: dom.postExcerpt.value.trim(),
     content: dom.postContent.value.trim(),
     is_published: true
@@ -1356,12 +1483,14 @@ dom.postEditorForm.addEventListener("submit", async (e) => {
       });
     }
     closeEditorModal();
-    loadArticles();
+    await loadArticles();
+    await renderWhoToFollowList();
   } catch (err) {
     dom.editorErrorMsg.textContent = err.message;
     dom.editorErrorMsg.style.display = "block";
   }
 });
+
 
 // ============================================================================
 // Auth Modals & First-Time Login OTP Filter
@@ -1422,14 +1551,6 @@ function showOtpVerificationStep(otpData) {
   dom.otpTargetUsername.textContent = otpData.username;
   dom.otpTargetEmail.textContent = otpData.email_masked || "registered email";
   if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
-
-  // Dev Demo Hint display
-  if (otpData.demo_otp_hint) {
-    dom.otpDemoCodeValue.textContent = otpData.demo_otp_hint;
-    dom.demoOtpBanner.style.display = "flex";
-  } else {
-    dom.demoOtpBanner.style.display = "none";
-  }
 
   // Reset inputs
   dom.otpDigits.forEach(input => {
@@ -1534,21 +1655,6 @@ dom.otpDigits.forEach((input, idx) => {
   });
 });
 
-// Auto-fill button helper
-if (dom.autoFillOtpBtn) {
-  dom.autoFillOtpBtn.addEventListener("click", () => {
-    const code = dom.otpDemoCodeValue.textContent.trim();
-    if (code && code.length === 6 && !isNaN(code)) {
-      code.split("").forEach((digit, i) => {
-        if (dom.otpDigits[i]) {
-          dom.otpDigits[i].value = digit;
-          dom.otpDigits[i].classList.add("filled");
-        }
-      });
-      dom.submitOtpBtn.focus();
-    }
-  });
-}
 
 // Return to Login screen
 if (dom.backToLoginFormBtn) {
@@ -1816,6 +1922,73 @@ function renderActivityStream() {
 }
 
 // ============================================================================
+// Who to Follow Recommendations (Dynamic from Published Authors)
+// ============================================================================
+let cachedPublishedAuthors = [];
+
+async function renderWhoToFollowList() {
+  if (!dom.whoToFollowList) return;
+
+  try {
+    let authors = [];
+    try {
+      authors = await apiRequest("/api/v1/posts/authors/published");
+      cachedPublishedAuthors = authors;
+    } catch (apiErr) {
+      // Fallback: extract unique authors from state.articles
+      const authorMap = new Map();
+      (state.articles || []).forEach(post => {
+        if (post.author && !authorMap.has(post.author.username)) {
+          authorMap.set(post.author.username, {
+            id: post.author.id,
+            username: post.author.username,
+            full_name: post.author.full_name || post.author.username,
+            avatar_url: post.author.avatar_url,
+            bio: `${post.author.role || "Author"} • Technical Lead`,
+            articles_count: 1
+          });
+        }
+      });
+      authors = Array.from(authorMap.values());
+      cachedPublishedAuthors = authors;
+    }
+
+    if (!authors || authors.length === 0) {
+      dom.whoToFollowList.innerHTML = `<div style="padding: 0.75rem; font-size: 0.8rem; color: var(--text-muted);">No published authors yet.</div>`;
+      return;
+    }
+
+    dom.whoToFollowList.innerHTML = authors.map(author => {
+      const isFollowing = state.followedAuthors.has(author.username);
+      const isCurrentUser = state.user && state.user.username === author.username;
+      const avatar = author.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${author.username}`;
+      const subtitle = author.bio || `${author.role || "Author"} • ${author.articles_count} publication${author.articles_count === 1 ? '' : 's'}`;
+
+      return `
+        <div class="follow-user-row" data-author="${escapeHtml(author.username)}">
+          <img src="${avatar}" class="follow-avatar" alt="${escapeHtml(author.full_name || author.username)}">
+          <div class="follow-info">
+            <span class="follow-name">${escapeHtml(author.full_name || author.username)}${isCurrentUser ? ' <small style="color:var(--text-muted);font-weight:400;">(You)</small>' : ''}</span>
+            <span class="follow-desc" title="${escapeHtml(subtitle)}">${escapeHtml(subtitle)}</span>
+          </div>
+          ${!isCurrentUser ? `
+            <button class="follow-btn ${isFollowing ? 'following' : ''}" data-author="${escapeHtml(author.username)}" data-author-name="${escapeHtml(author.full_name || author.username)}">
+              ${isFollowing ? 'Following' : 'Follow'}
+            </button>
+          ` : `
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; padding: 0.2rem 0.5rem; background: var(--bg-hover); border-radius: var(--radius-xs);">Author</span>
+          `}
+        </div>
+      `;
+    }).join("");
+
+    syncAllFollowButtons();
+  } catch (err) {
+    console.error("Failed to render Who to Follow list:", err);
+  }
+}
+
+// ============================================================================
 // Following Feed & Dynamic Follow Management
 // ============================================================================
 function syncAllFollowButtons() {
@@ -1838,42 +2011,34 @@ function renderFollowingFeed() {
   if (followed.length > 0) {
     renderFeedList(followed);
   } else {
+    const suggestedAuthors = cachedPublishedAuthors.filter(a => !state.user || a.username !== state.user.username).slice(0, 4);
     dom.articlesGrid.innerHTML = `
       <div class="following-empty-state">
         <div style="font-size: 2.2rem; margin-bottom: 0.75rem;">👥</div>
         <h3>You are not following any authors yet</h3>
         <p>Follow top engineering leads and researchers below to populate your customized feed with their latest systems deep dives.</p>
         <div class="following-suggested-grid">
-          <div class="suggested-author-card">
-            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80" class="suggested-author-avatar" alt="Dr. Elena">
-            <div class="suggested-author-meta">
-              <span class="suggested-author-name">Dr. Elena Vance</span>
-              <span class="suggested-author-role">Staff AI Engineer</span>
-            </div>
-            <button class="follow-btn" data-author="dr_elena" data-author-name="Dr. Elena Vance">Follow</button>
-          </div>
-          <div class="suggested-author-card">
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" class="suggested-author-avatar" alt="Marcus">
-            <div class="suggested-author-meta">
-              <span class="suggested-author-name">Marcus Chen</span>
-              <span class="suggested-author-role">Principal Systems Architect</span>
-            </div>
-            <button class="follow-btn" data-author="marcus_chen" data-author-name="Marcus Chen">Follow</button>
-          </div>
-          <div class="suggested-author-card">
-            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80" class="suggested-author-avatar" alt="Sarah">
-            <div class="suggested-author-meta">
-              <span class="suggested-author-name">Sarah Jenkins</span>
-              <span class="suggested-author-role">Lead Data Architect</span>
-            </div>
-            <button class="follow-btn" data-author="sarah_jenkins" data-author-name="Sarah Jenkins">Follow</button>
-          </div>
+          ${suggestedAuthors.map(author => {
+            const avatar = author.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${author.username}`;
+            const role = author.bio ? author.bio.split("•")[0].trim() : `${author.role} • ${author.articles_count} articles`;
+            return `
+              <div class="suggested-author-card">
+                <img src="${avatar}" class="suggested-author-avatar" alt="${escapeHtml(author.full_name || author.username)}">
+                <div class="suggested-author-meta">
+                  <span class="suggested-author-name">${escapeHtml(author.full_name || author.username)}</span>
+                  <span class="suggested-author-role">${escapeHtml(role)}</span>
+                </div>
+                <button class="follow-btn" data-author="${escapeHtml(author.username)}" data-author-name="${escapeHtml(author.full_name || author.username)}">Follow</button>
+              </div>
+            `;
+          }).join("")}
         </div>
       </div>
     `;
     syncAllFollowButtons();
   }
 }
+
 
 // Global click delegation for all follow buttons
 document.addEventListener("click", (e) => {
@@ -2060,4 +2225,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   initTheme();
   await initAuth();
   await loadArticles();
+  await renderWhoToFollowList();
 });
+

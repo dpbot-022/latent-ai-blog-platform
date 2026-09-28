@@ -1,17 +1,18 @@
 version: "3.8"
 
 services:
-  nexusai-web:
+  latent-web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nexusai-platform
+    container_name: latent-platform
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - SECRET_KEY=nexusai-production-super-secret-key-change-in-prod-2026
-      - DATABASE_URL=sqlite:////app/nexusai.db
+      - SECRET_KEY=latent-production-super-secret-key-change-in-prod-2026
+      - DATABASE_URL=sqlite:////app/latent.db
+
     volumes:
       - app-data:/app/frontend/uploads
       - db-data:/app

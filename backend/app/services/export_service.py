@@ -69,6 +69,6 @@ views: {post.views_count}
 {post.content}
 
 ---
-*Exported from NexusAI Production Platform*
+*Exported from LATENT Production Platform*
 """
         return frontmatter

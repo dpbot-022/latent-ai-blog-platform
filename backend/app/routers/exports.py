@@ -20,7 +20,7 @@ def export_posts_csv(db: Session = Depends(get_db)):
         content=csv_content,
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=nexusai_articles_catalog.csv"
+            "Content-Disposition": "attachment; filename=latent_articles_catalog.csv"
         }
     )
 
@@ -51,7 +51,8 @@ def export_posts_json(db: Session = Depends(get_db)):
     """
     posts, total = PostRepository.list_posts(db=db, skip=0, limit=1000, is_published=True)
     return {
-        "platform": "NexusAI",
+        "platform": "LATENT",
         "total_records": total,
         "articles": [PostService.to_summary_response(p) for p in posts]
     }
+

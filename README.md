@@ -1,4 +1,4 @@
-# NexusAI — Production-Grade AI Engineering Publication Platform
+# LATENT — Production-Grade AI Engineering Publication Platform
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com)
@@ -16,7 +16,8 @@
 
 Most blog platforms are built as monolithic CRUD prototypes with tightly coupled database logic, unprotected endpoints, and generic UI templates. 
 
-**NexusAI sets a high production bar by delivering an enterprise-ready publication ecosystem:**
+**LATENT sets a high production bar by delivering an enterprise-ready publication ecosystem:**
+
 1. **Clean Layered (MVC) Architecture**: Strict separation of concerns between HTTP Routers (Controllers), Business Services, Repositories (Data Access Layer), and Declarative Models, preventing vendor lock-in and maximizing testability.
 2. **Multi-Tenant Resource Ownership & RBAC**: True tenant data isolation where users have exclusive control over their articles and discussions. Enforces three strict roles: `READER`, `AUTHOR`, and `ADMIN`.
 3. **Database Performance & N+1 Query Elimination**: Pre-compiled compound indexes, SQLite Write-Ahead Logging (WAL) concurrency, and SQLAlchemy eager relationship joins (`joinedload` / `selectinload`) to prevent N+1 query bottlenecks.
@@ -89,7 +90,7 @@ Most blog platforms are built as monolithic CRUD prototypes with tightly coupled
 
 ## 📅 Bootcamp Curriculum Day-by-Day Alignment
 
-| Bootcamp Day | Core Concept | Production Implementation in NexusAI |
+| Bootcamp Day | Core Concept | Production Implementation in LATENT |
 | :--- | :--- | :--- |
 | **Day 1** | Foundations & SDLC | Modular directory hierarchy, Git conventional commits, `.env.example`, `.gitignore`, client-server decoupling, and HTTP lifecycle. |
 | **Day 2** | MVC & REST API Design | Controller routers (`routers/`), business services (`services/`), data access repositories (`repositories/`), pagination, filtering, sorting, and external AI analysis with retries/timeouts. |
@@ -144,7 +145,7 @@ docker compose up --build -d
 ```
 Inspect container health:
 ```bash
-docker ps --filter "name=nexusai-platform"
+docker ps --filter "name=latent-platform"
 ```
 
 ---
@@ -208,7 +209,7 @@ pytest -v
 *A structured walkthrough guide designed to keep your video demonstration concise, professional, and impactful.*
 
 - **0:00 – 0:25 | Introduction & Public Reading Experience**
-  - *"Welcome! This is NexusAI, a production-grade publication platform for AI and Data Engineering."*
+  - *"Welcome! This is LATENT, a production-grade publication platform for AI and Data Engineering."*
   - Show the landing page as an **unauthenticated visitor**. Demonstrate the 3-column panel grid, dark/light theme switch, category pills, and instant search.
   - Click on an article (e.g. *Hybrid Search with BM25 and ColBERT*) to show the rich Markdown rendering, code blocks, and the call-to-action inviting guests to sign in to like and comment.
 - **0:25 – 0:50 | Authentication, Multi-Tenancy & Engagement**

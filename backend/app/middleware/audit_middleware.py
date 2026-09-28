@@ -51,5 +51,5 @@ class ObservabilityAndRateLimitMiddleware(BaseHTTPMiddleware):
 
         # Add custom observability headers
         response.headers["X-Process-Time-Ms"] = f"{process_time_ms:.2f}"
-        response.headers["X-Platform-Engine"] = "NexusAI-Production-v1"
+        response.headers["X-Platform-Engine"] = "LATENT-Production-v1"
         return response
