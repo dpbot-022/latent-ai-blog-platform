@@ -19,6 +19,8 @@ const state = {
   userLikedPostIds: new Set(JSON.parse(localStorage.getItem("latent_liked_ids") || "[]")),
   userSavedPostIds: new Set(JSON.parse(localStorage.getItem("latent_saved_ids") || "[]")),
   userReadingHistory: JSON.parse(localStorage.getItem("latent_history_ids") || "[]"),
+  followedAuthors: new Set(JSON.parse(localStorage.getItem("latent_followed_authors") || '["dr_elena", "marcus_chen"]')),
+  activities: JSON.parse(localStorage.getItem("latent_activities") || "null"),
   currentReadingPost: null,
   otpPendingUsername: null,
   otpTimerInterval: null
@@ -29,8 +31,10 @@ const dom = {
   html: document.documentElement,
   themeToggleBtn: document.getElementById("themeToggleBtn"),
   authNavContainer: document.getElementById("authNavContainer"),
+  sidebarUserWidget: document.getElementById("sidebarUserWidget"),
   brandLogoHome: document.getElementById("brandLogoHome"),
   globalSearchInput: document.getElementById("globalSearchInput"),
+  searchClearBtn: document.getElementById("searchClearBtn"),
   topWriteBtn: document.getElementById("topWriteBtn"),
   rightWriteCtaBtn: document.getElementById("rightWriteCtaBtn"),
   exportAllCsvBtn: document.getElementById("exportAllCsvBtn"),
@@ -74,6 +78,8 @@ const dom = {
   writeStoryBtn: document.getElementById("writeStoryBtn"),
 
   // Stats View Elements
+  statsStoriesSection: document.getElementById("statsStoriesSection"),
+  statsAuditSection: document.getElementById("statsAuditSection"),
   statsPresentations: document.getElementById("statsPresentations"),
   statsViews: document.getElementById("statsViews"),
   statsReads: document.getElementById("statsReads"),
@@ -268,17 +274,99 @@ async function initAuth() {
 function renderAuthNav() {
   if (state.user) {
     dom.authNavContainer.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <img src="${state.user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + state.user.username}" 
-             class="user-avatar-chip" 
-             id="topUserAvatar"
-             title="${escapeHtml(state.user.full_name || state.user.username)} (${state.user.role})">
+      <div class="auth-nav-relative">
+        <button class="user-avatar-btn" id="topUserAvatarBtn" aria-label="Account menu" title="${escapeHtml(state.user.full_name || state.user.username)} (${state.user.role})">
+          <img src="${state.user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + state.user.username}" 
+               class="user-avatar-chip" 
+               alt="${escapeHtml(state.user.username)}">
+        </button>
+        <div class="user-menu-dropdown" id="userMenuDropdown">
+          <div class="user-menu-header">
+            <div class="user-menu-name">${escapeHtml(state.user.full_name || state.user.username)}</div>
+            <div class="user-menu-handle">@${escapeHtml(state.user.username)} · ${state.user.role}</div>
+          </div>
+          <button class="user-menu-item" id="menuProfileBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Profile
+          </button>
+          <button class="user-menu-item" id="menuStoriesBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Your stories
+          </button>
+          <button class="user-menu-item" id="menuStatsBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            Stats
+          </button>
+          <button class="user-menu-item danger" id="menuLogoutBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Sign out
+          </button>
+        </div>
       </div>
     `;
 
-    document.getElementById("topUserAvatar").addEventListener("click", () => {
+    const avatarBtn = document.getElementById("topUserAvatarBtn");
+    const dropdown = document.getElementById("userMenuDropdown");
+
+    avatarBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle("show");
+    });
+
+    document.getElementById("menuProfileBtn").addEventListener("click", () => {
+      dropdown.classList.remove("show");
       switchView("profile");
     });
+
+    document.getElementById("menuStoriesBtn").addEventListener("click", () => {
+      dropdown.classList.remove("show");
+      switchView("stories");
+    });
+
+    document.getElementById("menuStatsBtn").addEventListener("click", () => {
+      dropdown.classList.remove("show");
+      switchView("stats");
+    });
+
+    document.getElementById("menuLogoutBtn").addEventListener("click", () => {
+      dropdown.classList.remove("show");
+      logout();
+    });
+
+    // Populate left sidebar user widget
+    if (dom.sidebarUserWidget) {
+      dom.sidebarUserWidget.style.display = "flex";
+      dom.sidebarUserWidget.innerHTML = `
+        <img src="${state.user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + state.user.username}" class="sidebar-user-avatar" alt="Avatar">
+        <div class="sidebar-user-meta">
+          <span class="sidebar-user-name">${escapeHtml(state.user.full_name || state.user.username)}</span>
+          <span class="sidebar-user-sub">@${escapeHtml(state.user.username)}</span>
+        </div>
+        <button class="sidebar-logout-btn" id="sidebarLogoutActionBtn" title="Sign Out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      `;
+      const sideLogoutBtn = document.getElementById("sidebarLogoutActionBtn");
+      if (sideLogoutBtn) sideLogoutBtn.addEventListener("click", logout);
+    }
 
   } else {
     dom.authNavContainer.innerHTML = `
@@ -289,10 +377,27 @@ function renderAuthNav() {
     `;
     document.getElementById("openSignInBtn").addEventListener("click", () => openAuthModal("login"));
     document.getElementById("openSignUpBtn").addEventListener("click", () => openAuthModal("register"));
+
+    if (dom.sidebarUserWidget) {
+      dom.sidebarUserWidget.style.display = "none";
+      dom.sidebarUserWidget.innerHTML = "";
+    }
   }
 }
 
+// Global click listener to close avatar dropdown
+document.addEventListener("click", () => {
+  const dropdown = document.getElementById("userMenuDropdown");
+  if (dropdown) dropdown.classList.remove("show");
+});
+
 function logout() {
+  const loggedOutUser = state.user ? (state.user.full_name || state.user.username) : "User";
+  addActivity({
+    type: "auth",
+    title: "Session Terminated",
+    text: `<strong>${escapeHtml(loggedOutUser)}</strong> signed out of the platform.`
+  });
   state.token = null;
   state.user = null;
   localStorage.removeItem("latent_token");
@@ -328,8 +433,15 @@ async function loadArticles() {
     state.articles = data.items;
     data.items.forEach(p => state.allArticlesMap.set(p.id, p));
 
-    renderFeedList(state.articles);
+    if (state.currentHomeSubtab === "following") {
+      renderFollowingFeed();
+    } else if (state.currentHomeSubtab === "activity") {
+      renderActivityStream();
+    } else {
+      renderFeedList(state.articles);
+    }
     renderStaffPicks(state.articles.slice(0, 3));
+    syncAllFollowButtons();
     dom.resultsCount.textContent = `Showing ${data.total} articles`;
 
   } catch (err) {
@@ -464,18 +576,28 @@ function renderStaffPicks(picks) {
 }
 
 function toggleBookmark(postId, btnElement) {
-  const isSaved = state.userSavedPostIds.has(postId);
+  const pId = parseInt(postId);
+  const isSaved = state.userSavedPostIds.has(pId);
+  const postObj = state.articles.find(p => p.id === pId) || state.currentReadingPost;
+  const postTitle = postObj ? postObj.title : `Story #${pId}`;
+
   if (isSaved) {
-    state.userSavedPostIds.delete(postId);
+    state.userSavedPostIds.delete(pId);
     if (btnElement) btnElement.classList.remove("bookmarked");
     showToast("Story removed from your library.", "info");
   } else {
-    state.userSavedPostIds.add(postId);
+    state.userSavedPostIds.add(pId);
     if (btnElement) btnElement.classList.add("bookmarked");
     showToast("Story saved to your library.", "success");
+    addActivity({
+      type: "bookmark",
+      title: "Saved to Library",
+      text: `You saved <a onclick="openReaderModal(${pId})">${escapeHtml(postTitle)}</a> to your library.`,
+      post_id: pId
+    });
   }
   localStorage.setItem("latent_saved_ids", JSON.stringify([...state.userSavedPostIds]));
-  if (state.currentReadingPost && state.currentReadingPost.id === postId) {
+  if (state.currentReadingPost && state.currentReadingPost.id === pId) {
     updateReaderBookmarkState();
   }
 }
@@ -493,8 +615,34 @@ function updateReaderBookmarkState() {
 }
 
 // ============================================================================
-// Engagement: Like / Clap Toggle with Optimistic UI
+// Engagement: Like / Clap Toggle with Optimistic UI & Modal/Feed Sync
 // ============================================================================
+function syncPostClapUI(postId, isLiked, count) {
+  const pId = parseInt(postId);
+  const post = state.articles.find(p => p.id === pId);
+  if (post) post.likes_count = count;
+
+  document.querySelectorAll(`.clap-btn[data-post-id="${pId}"]`).forEach(btn => {
+    if (isLiked) btn.classList.add("clapped");
+    else btn.classList.remove("clapped");
+    const countEl = btn.querySelector(".clap-count");
+    if (countEl) countEl.textContent = count;
+  });
+
+  if (state.currentReadingPost && state.currentReadingPost.id === pId) {
+    if (dom.readerLikeCount) dom.readerLikeCount.textContent = count;
+    if (dom.readerLikeBtn) {
+      if (isLiked) {
+        dom.readerLikeBtn.classList.add("liked");
+        dom.readerLikeBtn.classList.add("clapped");
+      } else {
+        dom.readerLikeBtn.classList.remove("liked");
+        dom.readerLikeBtn.classList.remove("clapped");
+      }
+    }
+  }
+}
+
 async function handleLikeToggle(postId, btnElement) {
   if (!state.user) {
     showToast("Please sign in to clap for this story.", "info");
@@ -502,34 +650,42 @@ async function handleLikeToggle(postId, btnElement) {
     return;
   }
 
-  const countSpan = btnElement ? btnElement.querySelector(".clap-count") : dom.readerLikeCount;
-  const currentCount = parseInt(countSpan.textContent || "0");
-  const wasLiked = state.userLikedPostIds.has(parseInt(postId));
+  const pId = parseInt(postId);
+  const wasLiked = state.userLikedPostIds.has(pId);
+  const postObj = state.articles.find(p => p.id === pId) || state.currentReadingPost;
+  const currentCount = postObj ? postObj.likes_count : parseInt((dom.readerLikeCount ? dom.readerLikeCount.textContent : "0") || "0");
+  const newCount = wasLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
 
-  // Optimistic update
   if (wasLiked) {
-    if (btnElement) btnElement.classList.remove("clapped");
-    if (countSpan) countSpan.textContent = Math.max(0, currentCount - 1);
-    state.userLikedPostIds.delete(parseInt(postId));
+    state.userLikedPostIds.delete(pId);
   } else {
-    if (btnElement) btnElement.classList.add("clapped");
-    if (countSpan) countSpan.textContent = currentCount + 1;
-    state.userLikedPostIds.add(parseInt(postId));
+    state.userLikedPostIds.add(pId);
   }
   localStorage.setItem("latent_liked_ids", JSON.stringify([...state.userLikedPostIds]));
+  syncPostClapUI(pId, !wasLiked, newCount);
+
+  const postTitle = postObj ? postObj.title : `Story #${pId}`;
 
   try {
-    const res = await apiRequest(`/api/v1/posts/${postId}/likes/toggle`, { method: "POST" });
-    if (countSpan) countSpan.textContent = res.likes_count;
+    const res = await apiRequest(`/api/v1/posts/${pId}/likes/toggle`, { method: "POST" });
+    syncPostClapUI(pId, res.liked, res.likes_count);
     if (res.liked) {
-      if (btnElement) btnElement.classList.add("clapped");
-      state.userLikedPostIds.add(parseInt(postId));
+      state.userLikedPostIds.add(pId);
+      addActivity({
+        type: "like",
+        title: "Clapped for Story",
+        text: `You clapped for <a onclick="openReaderModal(${pId})">${escapeHtml(postTitle)}</a>`,
+        post_id: pId
+      });
     } else {
-      if (btnElement) btnElement.classList.remove("clapped");
-      state.userLikedPostIds.delete(parseInt(postId));
+      state.userLikedPostIds.delete(pId);
     }
     localStorage.setItem("latent_liked_ids", JSON.stringify([...state.userLikedPostIds]));
   } catch (err) {
+    syncPostClapUI(pId, wasLiked, currentCount);
+    if (wasLiked) state.userLikedPostIds.add(pId);
+    else state.userLikedPostIds.delete(pId);
+    localStorage.setItem("latent_liked_ids", JSON.stringify([...state.userLikedPostIds]));
     showToast(err.message, "error");
   }
 }
@@ -669,6 +825,12 @@ function renderCommentsSection(post) {
         });
         textInput.value = "";
         showToast("Response published!", "success");
+        addActivity({
+          type: "comment",
+          title: "Commented on Story",
+          text: `You responded to <a onclick="openReaderModal(${post.id})">${escapeHtml(post.title)}</a>: "${escapeHtml(content.substring(0, 60))}${content.length > 60 ? '...' : ''}"`,
+          post_id: post.id
+        });
         post.comments = [newComment, ...(post.comments || [])];
         renderCommentsList(post.comments, post.author_id);
         dom.readerCommentsCount.textContent = post.comments.length;
@@ -807,15 +969,29 @@ async function renderProfileView() {
   };
 
   dom.profileCardHeader.innerHTML = `
-    <img src="${user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + user.username}" class="profile-avatar-large">
+    <img src="${user.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + user.username}" class="profile-avatar-large" alt="Profile">
     <div class="profile-info-block">
       <h2>${escapeHtml(user.full_name || user.username)}</h2>
       <p style="margin-bottom: 0.35rem;">@${escapeHtml(user.username)} · <span class="cat-badge-small">${user.role}</span></p>
       <p>${escapeHtml(user.bio || 'AI & Data Engineering Architect')}</p>
     </div>
+    ${state.user ? `
+      <div class="profile-action-group">
+        <button class="logout-profile-btn" id="profileSignOutBtn" title="Sign out of your account">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    ` : ''}
   `;
 
   if (state.user) {
+    const profSignOutBtn = document.getElementById("profileSignOutBtn");
+    if (profSignOutBtn) profSignOutBtn.addEventListener("click", logout);
     try {
       const myPosts = await apiRequest("/api/v1/posts/user/my-posts");
       dom.profileTabContent.innerHTML = `
@@ -963,10 +1139,14 @@ document.querySelectorAll("#viewStats .feed-tab").forEach(tab => {
     document.querySelectorAll("#viewStats .feed-tab").forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
     const subtab = tab.getAttribute("data-stattab");
+    const storiesSec = document.getElementById("statsStoriesSection");
+    const auditSec = document.getElementById("statsAuditSection");
     if (subtab === "system") {
-      document.getElementById("statsAuditSection").style.display = "block";
+      if (storiesSec) storiesSec.style.display = "none";
+      if (auditSec) auditSec.style.display = "block";
     } else {
-      document.getElementById("statsAuditSection").style.display = "block";
+      if (storiesSec) storiesSec.style.display = "block";
+      if (auditSec) auditSec.style.display = "none";
     }
   });
 });
@@ -1103,11 +1283,17 @@ dom.postEditorForm.addEventListener("submit", async (e) => {
       });
       showToast("Story updated!", "success");
     } else {
-      await apiRequest("/api/v1/posts", {
+      const createdPost = await apiRequest("/api/v1/posts", {
         method: "POST",
         body: JSON.stringify(payload)
       });
       showToast("Story published to Latent!", "success");
+      addActivity({
+        type: "publish",
+        title: "New Story Published",
+        text: `You published <a onclick="openReaderModal(${createdPost.id})">${escapeHtml(createdPost.title)}</a> in ${escapeHtml(createdPost.category)}`,
+        post_id: createdPost.id
+      });
     }
     closeEditorModal();
     loadArticles();
@@ -1126,6 +1312,10 @@ function openAuthModal(tab = "login") {
   dom.loginErrorMsg.style.display = "none";
   dom.registerErrorMsg.style.display = "none";
   if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
+
+  // Reset inputs
+  if (dom.loginForm) dom.loginForm.reset();
+  if (dom.registerForm) dom.registerForm.reset();
 
   // Stop any active OTP timer
   if (state.otpTimerInterval) {
@@ -1464,6 +1654,200 @@ dom.registerForm.addEventListener("submit", async (e) => {
 // Controls: Subtabs, Categories, Search
 // ============================================================================
 // Home Subtabs (For You, Following, Activity)
+// ============================================================================
+// Live Activity Tracking & Dynamic Stream
+// ============================================================================
+const defaultActivities = [
+  {
+    type: "like",
+    icon: "♥",
+    text: `<strong>Dr. Elena Vance</strong> clapped for <a onclick="openReaderModal(1)">DeepSeek–V3 Architecture: Multi-Head Latent Attention (MLA) Deep Dive</a>`,
+    time: Date.now() - 12 * 60 * 1000
+  },
+  {
+    type: "comment",
+    icon: "💬",
+    text: `<strong>Marcus Chen</strong> responded to <a onclick="openReaderModal(2)">Hybrid Search at Scale: Combining Sparse BM25 with Dense HNSW Vectors</a>`,
+    time: Date.now() - 34 * 60 * 1000
+  },
+  {
+    type: "publish",
+    icon: "✦",
+    text: `<strong>Sarah Jenkins</strong> published <a onclick="openReaderModal(3)">The Modern Lakehouse Architecture: Apache Iceberg & Trino Deep Dive</a>`,
+    time: Date.now() - 2 * 60 * 60 * 1000
+  },
+  {
+    type: "follow",
+    icon: "👤",
+    text: `<strong>Marcus Chen</strong> started following <strong>Dr. Elena Vance</strong>`,
+    time: Date.now() - 4 * 60 * 60 * 1000
+  }
+];
+
+function formatTimeAgo(ts) {
+  if (!ts) return "Just now";
+  const diffSec = Math.floor((Date.now() - ts) / 1000);
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
+function addActivity(act) {
+  if (!state.activities || !Array.isArray(state.activities) || state.activities.length === 0) {
+    state.activities = [...defaultActivities];
+  }
+  const entry = {
+    type: act.type || "auth",
+    icon: act.type === "like" ? "♥" : act.type === "comment" ? "💬" : act.type === "bookmark" ? "🔖" : act.type === "follow" ? "👤" : act.type === "publish" ? "✦" : "🛡️",
+    text: act.text || act.title,
+    time: act.timestamp || Date.now()
+  };
+  state.activities.unshift(entry);
+  if (state.activities.length > 50) state.activities.pop();
+  localStorage.setItem("latent_activities", JSON.stringify(state.activities));
+
+  if (state.currentHomeSubtab === "activity" && dom.views.home.classList.contains("active")) {
+    renderActivityStream();
+  }
+}
+
+function renderActivityStream() {
+  if (!state.activities || !Array.isArray(state.activities) || state.activities.length === 0) {
+    state.activities = [...defaultActivities];
+  }
+
+  dom.articlesGrid.innerHTML = `
+    <div style="padding: 1.5rem 0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin: 0;">Live Community & User Activity</h3>
+        <button class="secondary-btn" id="clearActivityBtn" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">Clear Stream</button>
+      </div>
+      <div class="activity-stream-timeline">
+        ${state.activities.map(act => `
+          <div class="activity-item-card">
+            <div class="activity-icon-badge ${act.type}">
+              ${act.icon || "•"}
+            </div>
+            <div class="activity-body">
+              <div class="activity-body-text">${act.text}</div>
+              <span class="activity-timestamp">${formatTimeAgo(act.time)}</span>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  const clearBtn = document.getElementById("clearActivityBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      state.activities = [];
+      localStorage.removeItem("latent_activities");
+      renderActivityStream();
+      showToast("Activity stream cleared.", "info");
+    });
+  }
+}
+
+// ============================================================================
+// Following Feed & Dynamic Follow Management
+// ============================================================================
+function syncAllFollowButtons() {
+  document.querySelectorAll(".follow-btn").forEach(btn => {
+    const author = btn.getAttribute("data-author");
+    if (!author) return;
+    const isFollowing = state.followedAuthors.has(author);
+    if (isFollowing) {
+      btn.classList.add("following");
+      btn.textContent = "Following";
+    } else {
+      btn.classList.remove("following");
+      btn.textContent = "Follow";
+    }
+  });
+}
+
+function renderFollowingFeed() {
+  const followed = state.articles.filter(p => state.followedAuthors.has(p.author.username));
+  if (followed.length > 0) {
+    renderFeedList(followed);
+  } else {
+    dom.articlesGrid.innerHTML = `
+      <div class="following-empty-state">
+        <div style="font-size: 2.2rem; margin-bottom: 0.75rem;">👥</div>
+        <h3>You are not following any authors yet</h3>
+        <p>Follow top engineering leads and researchers below to populate your customized feed with their latest systems deep dives.</p>
+        <div class="following-suggested-grid">
+          <div class="suggested-author-card">
+            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&q=80" class="suggested-author-avatar" alt="Dr. Elena">
+            <div class="suggested-author-meta">
+              <span class="suggested-author-name">Dr. Elena Vance</span>
+              <span class="suggested-author-role">Staff AI Engineer</span>
+            </div>
+            <button class="follow-btn" data-author="dr_elena" data-author-name="Dr. Elena Vance">Follow</button>
+          </div>
+          <div class="suggested-author-card">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" class="suggested-author-avatar" alt="Marcus">
+            <div class="suggested-author-meta">
+              <span class="suggested-author-name">Marcus Chen</span>
+              <span class="suggested-author-role">Principal Systems Architect</span>
+            </div>
+            <button class="follow-btn" data-author="marcus_chen" data-author-name="Marcus Chen">Follow</button>
+          </div>
+          <div class="suggested-author-card">
+            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80" class="suggested-author-avatar" alt="Sarah">
+            <div class="suggested-author-meta">
+              <span class="suggested-author-name">Sarah Jenkins</span>
+              <span class="suggested-author-role">Lead Data Architect</span>
+            </div>
+            <button class="follow-btn" data-author="sarah_jenkins" data-author-name="Sarah Jenkins">Follow</button>
+          </div>
+        </div>
+      </div>
+    `;
+    syncAllFollowButtons();
+  }
+}
+
+// Global click delegation for all follow buttons
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".follow-btn");
+  if (!btn) return;
+  const author = btn.getAttribute("data-author");
+  const authorName = btn.getAttribute("data-author-name") || author;
+  if (!author) return;
+
+  if (state.followedAuthors.has(author)) {
+    state.followedAuthors.delete(author);
+    showToast(`Unfollowed ${authorName}`, "info");
+    addActivity({
+      type: "follow",
+      title: "Author Unfollowed",
+      text: `You unfollowed <strong>${escapeHtml(authorName)}</strong>`
+    });
+  } else {
+    state.followedAuthors.add(author);
+    showToast(`You are now following ${authorName}!`, "success");
+    addActivity({
+      type: "follow",
+      title: "New Follow",
+      text: `You started following <strong>${escapeHtml(authorName)}</strong>`
+    });
+  }
+
+  localStorage.setItem("latent_followed_authors", JSON.stringify([...state.followedAuthors]));
+  syncAllFollowButtons();
+
+  if (state.currentHomeSubtab === "following") {
+    renderFollowingFeed();
+  }
+});
+
+// Home Subtabs (For You, Following, Activity)
 document.querySelectorAll(".feed-tabs-list .feed-tab").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".feed-tabs-list .feed-tab").forEach(b => b.classList.remove("active"));
@@ -1472,42 +1856,14 @@ document.querySelectorAll(".feed-tabs-list .feed-tab").forEach(btn => {
     state.currentHomeSubtab = subtab;
 
     if (subtab === "following") {
-      // Filter by authors followed
-      const filtered = state.articles.filter(p => p.author.username === "dr_elena" || p.author.username === "marcus_chen");
-      renderFeedList(filtered);
+      renderFollowingFeed();
     } else if (subtab === "activity") {
-      // Activity stream
       renderActivityStream();
     } else {
       renderFeedList(state.articles);
     }
   });
 });
-
-function renderActivityStream() {
-  dom.articlesGrid.innerHTML = `
-    <div style="padding: 1.5rem 0;">
-      <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem;">Live Community Activity</h3>
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <div style="padding: 1rem; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 0.75rem;">
-          <span style="color: #F43F5E; font-size: 1.2rem;">♥</span>
-          <div><strong>Dr. Elena Vance</strong> clapped for <em>Ultra-Low Latency LLM Serving</em></div>
-          <span style="margin-left: auto; font-size: 0.78rem; color: var(--text-muted);">12m ago</span>
-        </div>
-        <div style="padding: 1rem; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 0.75rem;">
-          <span style="color: var(--accent-primary); font-size: 1.2rem;">💬</span>
-          <div><strong>Marcus Chen</strong> responded to <em>Architecting Production RAG</em></div>
-          <span style="margin-left: auto; font-size: 0.78rem; color: var(--text-muted);">34m ago</span>
-        </div>
-        <div style="padding: 1rem; border-radius: var(--radius-sm); background: var(--bg-elevated); border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 0.75rem;">
-          <span style="color: #10B981; font-size: 1.2rem;">★</span>
-          <div><strong>Sarah Jenkins</strong> published <em>The Modern Lakehouse Architecture</em></div>
-          <span style="margin-left: auto; font-size: 0.78rem; color: var(--text-muted);">2h ago</span>
-        </div>
-      </div>
-    </div>
-  `;
-}
 
 // Category Pills
 document.querySelectorAll(".cat-chip").forEach(chip => {
@@ -1533,30 +1889,43 @@ document.querySelectorAll(".topic-pill").forEach(pill => {
   });
 });
 
-// Follow buttons
-document.querySelectorAll(".follow-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const isFollowing = btn.classList.contains("following");
-    if (isFollowing) {
-      btn.classList.remove("following");
-      btn.textContent = "Follow";
-    } else {
-      btn.classList.add("following");
-      btn.textContent = "Following";
-      showToast("Author added to your following feed!", "success");
-    }
-  });
-});
-
-// Search input
+// Search input with Clear Button & Keyboard Shortcut
 let searchTimer = null;
-dom.globalSearchInput.addEventListener("input", (e) => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    state.searchQuery = e.target.value.trim();
+if (dom.globalSearchInput) {
+  dom.globalSearchInput.addEventListener("input", (e) => {
+    const val = e.target.value;
+    if (dom.searchClearBtn) {
+      dom.searchClearBtn.style.display = val ? "block" : "none";
+    }
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.searchQuery = val.trim();
+      switchView("home");
+      loadArticles();
+    }, 250);
+  });
+}
+
+if (dom.searchClearBtn) {
+  dom.searchClearBtn.addEventListener("click", () => {
+    dom.globalSearchInput.value = "";
+    dom.searchClearBtn.style.display = "none";
+    state.searchQuery = "";
+    dom.globalSearchInput.focus();
     switchView("home");
     loadArticles();
-  }, 250);
+  });
+}
+
+// Global '/' shortcut to focus search
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    if (dom.globalSearchInput) {
+      dom.globalSearchInput.focus();
+      dom.globalSearchInput.select();
+    }
+  }
 });
 
 // Sort select
@@ -1579,16 +1948,20 @@ dom.brandLogoHome.addEventListener("click", () => {
 function resetFilters() {
   state.currentCategory = "";
   state.searchQuery = "";
-  dom.globalSearchInput.value = "";
+  if (dom.globalSearchInput) dom.globalSearchInput.value = "";
+  if (dom.searchClearBtn) dom.searchClearBtn.style.display = "none";
   document.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
-  document.querySelector(".cat-chip[data-category='']").classList.add("active");
+  const defaultChip = document.querySelector(".cat-chip[data-category='']");
+  if (defaultChip) defaultChip.classList.add("active");
   loadArticles();
 }
 
-dom.exportAllCsvBtn.addEventListener("click", () => {
-  window.location.href = "/api/v1/export/posts/csv";
-  showToast("Downloading catalog CSV...", "success");
-});
+if (dom.exportAllCsvBtn) {
+  dom.exportAllCsvBtn.addEventListener("click", () => {
+    window.location.href = "/api/v1/export/posts/csv";
+    showToast("Downloading catalog CSV...", "success");
+  });
+}
 
 // Markdown Renderer
 function renderMarkdown(md) {

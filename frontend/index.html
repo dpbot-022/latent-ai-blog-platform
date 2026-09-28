@@ -37,14 +37,15 @@
         </div>
       </div>
 
-      <!-- Search Input -->
+      <!-- Search Input (Expanded & Presentable) -->
       <div class="medium-search-box">
         <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <input type="text" id="globalSearchInput" placeholder="Search architecture, RAG, lakehouse, CUDA..." autocomplete="off">
-        <span class="search-shortcut">/</span>
+        <button class="search-clear-btn" id="searchClearBtn" aria-label="Clear search" title="Clear search" style="display: none;">&times;</button>
+        <span class="search-shortcut" id="searchShortcutHint">/</span>
       </div>
     </div>
 
@@ -58,26 +59,6 @@
         </svg>
         <span>Write</span>
       </button>
-
-      <!-- Quick Catalog CSV Export -->
-      <button class="top-icon-btn" id="exportAllCsvBtn" title="Export All Articles as CSV (Day 4)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        <span class="btn-label-desktop">CSV</span>
-      </button>
-
-      <!-- API Swagger Link -->
-      <a href="/docs" target="_blank" class="top-icon-btn" title="FastAPI Interactive Swagger Specs (Day 2)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-        </svg>
-        <span class="btn-label-desktop">API</span>
-      </a>
 
       <!-- Dark / Light Theme Toggle -->
       <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle theme">
@@ -97,8 +78,8 @@
         </svg>
       </button>
 
-      <!-- Auth Action Container (Sign In / User Avatar) -->
-      <div id="authNavContainer">
+      <!-- Auth Action Container (Sign In / User Avatar with Dropdown) -->
+      <div id="authNavContainer" class="auth-nav-relative">
         <!-- Rendered dynamically by app.js -->
       </div>
     </div>
@@ -160,6 +141,11 @@
       <div class="sidebar-health-indicator" id="sidebarHealthBadge">
         <span class="pulse-dot"></span>
         <span class="health-text">v1.0.0 • UP</span>
+      </div>
+
+      <!-- User Account & Logout Widget in Sidebar -->
+      <div class="sidebar-user-widget" id="sidebarUserWidget" style="display: none;">
+        <!-- Populated dynamically by app.js when logged in -->
       </div>
     </aside>
 
@@ -291,75 +277,85 @@
 
         <div class="feed-tabs-header">
           <div class="feed-tabs-list">
-            <button class="feed-tab active" data-stattab="stories">Stories</button>
-            <button class="feed-tab" data-stattab="system">System & Audit Logs</button>
+            <button class="feed-tab active" data-stattab="stories">Story & Audience Analytics</button>
+            <button class="feed-tab" data-stattab="system">Security & Compliance Trail (Admin/DevOps)</button>
           </div>
         </div>
 
-        <!-- Metric KPI Summary Row -->
-        <div class="stats-kpi-row">
-          <div class="kpi-card">
-            <span class="kpi-label">Presentations</span>
-            <span class="kpi-value" id="statsPresentations">1,420</span>
+        <!-- Section 1: Stories & Audience Analytics (Default View for Authors/Readers) -->
+        <div id="statsStoriesSection">
+          <!-- Metric KPI Summary Row -->
+          <div class="stats-kpi-row">
+            <div class="kpi-card">
+              <span class="kpi-label">Presentations</span>
+              <span class="kpi-value" id="statsPresentations">1,420</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Views</span>
+              <span class="kpi-value" id="statsViews">842</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Reads</span>
+              <span class="kpi-value" id="statsReads">519</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Claps / Likes</span>
+              <span class="kpi-value" id="statsLikes">14</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Avg Read Ratio</span>
+              <span class="kpi-value status-good" id="statsLatency">61.6%</span>
+            </div>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Views</span>
-            <span class="kpi-value" id="statsViews">842</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Reads</span>
-            <span class="kpi-value" id="statsReads">519</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Claps / Likes</span>
-            <span class="kpi-value" id="statsLikes">14</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Avg Latency</span>
-            <span class="kpi-value status-good" id="statsLatency">0.68ms</span>
+
+          <!-- Interactive SVG Chart Component -->
+          <div class="stats-chart-card">
+            <div class="chart-header">
+              <h3>Monthly Activity & Readership</h3>
+              <span class="chart-legend">
+                <span class="legend-dot views"></span> Views
+                <span class="legend-dot reads"></span> Reads
+              </span>
+            </div>
+            <div class="chart-svg-wrapper">
+              <svg class="stats-svg" viewBox="0 0 800 220" preserveAspectRatio="none">
+                <!-- Grid lines -->
+                <line x1="0" y1="40" x2="800" y2="40" stroke="var(--border-subtle)" stroke-dasharray="4"></line>
+                <line x1="0" y1="100" x2="800" y2="100" stroke="var(--border-subtle)" stroke-dasharray="4"></line>
+                <line x1="0" y1="160" x2="800" y2="160" stroke="var(--border-subtle)" stroke-dasharray="4"></line>
+                
+                <!-- Views Line (Cyan/Accent) -->
+                <path d="M 0 170 Q 150 140, 250 110 T 500 70 T 700 30 T 800 25" fill="none" stroke="var(--accent-primary)" stroke-width="3"></path>
+                
+                <!-- Reads Line (Green/Gradient) -->
+                <path d="M 0 190 Q 150 165, 250 140 T 500 110 T 700 80 T 800 75" fill="none" stroke="#10B981" stroke-width="2.5"></path>
+                
+                <!-- Points -->
+                <circle cx="250" cy="110" r="5" fill="var(--accent-primary)"></circle>
+                <circle cx="500" cy="70" r="5" fill="var(--accent-primary)"></circle>
+                <circle cx="700" cy="30" r="5" fill="var(--accent-primary)"></circle>
+              </svg>
+            </div>
+            <div class="chart-dates-row">
+              <span>Sep 1</span>
+              <span>Sep 8</span>
+              <span>Sep 15</span>
+              <span>Sep 22</span>
+              <span>Sep 28</span>
+            </div>
           </div>
         </div>
 
-        <!-- Interactive SVG Chart Component -->
-        <div class="stats-chart-card">
-          <div class="chart-header">
-            <h3>Monthly Activity & Readership</h3>
-            <span class="chart-legend">
-              <span class="legend-dot views"></span> Views
-              <span class="legend-dot reads"></span> Reads
-            </span>
+        <!-- Section 2: Telemetry & Security Audit Trail (Admin / System Observability) -->
+        <div class="audit-section-container" id="statsAuditSection" style="display: none; margin-top: 1.5rem;">
+          <div class="audit-info-banner">
+            <div class="audit-banner-icon">🛡️</div>
+            <div class="audit-banner-content">
+              <strong>Enterprise Observability & Security Audit Trail</strong>
+              <p>In production backend systems (Bootcamp Day 5 Deliverable), security events (logins, authentication failures, OTP dispatches, and article mutations) are immutably logged with timestamps and client IPs for SOC 2 compliance and brute-force detection.</p>
+            </div>
           </div>
-          <div class="chart-svg-wrapper">
-            <svg class="stats-svg" viewBox="0 0 800 220" preserveAspectRatio="none">
-              <!-- Grid lines -->
-              <line x1="0" y1="40" x2="800" y2="40" stroke="var(--border-subtle)" stroke-dasharray="4"></line>
-              <line x1="0" y1="100" x2="800" y2="100" stroke="var(--border-subtle)" stroke-dasharray="4"></line>
-              <line x1="0" y1="160" x2="800" y2="160" stroke="var(--border-subtle)" stroke-dasharray="4"></line>
-              
-              <!-- Views Line (Cyan/Accent) -->
-              <path d="M 0 170 Q 150 140, 250 110 T 500 70 T 700 30 T 800 25" fill="none" stroke="var(--accent-primary)" stroke-width="3"></path>
-              
-              <!-- Reads Line (Green/Gradient) -->
-              <path d="M 0 190 Q 150 165, 250 140 T 500 110 T 700 80 T 800 75" fill="none" stroke="#10B981" stroke-width="2.5"></path>
-              
-              <!-- Points -->
-              <circle cx="250" cy="110" r="5" fill="var(--accent-primary)"></circle>
-              <circle cx="500" cy="70" r="5" fill="var(--accent-primary)"></circle>
-              <circle cx="700" cy="30" r="5" fill="var(--accent-primary)"></circle>
-            </svg>
-          </div>
-          <div class="chart-dates-row">
-            <span>Sep 1</span>
-            <span>Sep 8</span>
-            <span>Sep 15</span>
-            <span>Sep 22</span>
-            <span>Sep 28</span>
-          </div>
-        </div>
 
-        <!-- Telemetry & Security Audit Trail -->
-        <div class="audit-section-container" id="statsAuditSection" style="margin-top: 2rem;">
-          <h3>Security & Operational Audit Trail (Day 5)</h3>
           <div class="audit-table-wrapper">
             <table class="audit-table">
               <thead>
@@ -424,7 +420,7 @@
               <span class="follow-name">Dr. Elena Vance</span>
               <span class="follow-desc">Staff AI Engineer • Dense Retrieval</span>
             </div>
-            <button class="follow-btn" data-following="false">Follow</button>
+            <button class="follow-btn" data-author="dr_elena" data-author-name="Dr. Elena Vance">Follow</button>
           </div>
 
           <div class="follow-user-row">
@@ -433,7 +429,7 @@
               <span class="follow-name">Marcus Chen</span>
               <span class="follow-desc">Principal GPU Systems Architect</span>
             </div>
-            <button class="follow-btn" data-following="false">Follow</button>
+            <button class="follow-btn" data-author="marcus_chen" data-author-name="Marcus Chen">Follow</button>
           </div>
 
           <div class="follow-user-row">
@@ -442,7 +438,7 @@
               <span class="follow-name">Sarah Jenkins</span>
               <span class="follow-desc">Lead Data Architect • Apache Iceberg</span>
             </div>
-            <button class="follow-btn" data-following="false">Follow</button>
+            <button class="follow-btn" data-author="sarah_jenkins" data-author-name="Sarah Jenkins">Follow</button>
           </div>
         </div>
       </div>
@@ -529,22 +525,14 @@
       <form id="loginForm" class="auth-form">
         <div class="form-group">
           <label for="loginUsername">Username or Email</label>
-          <input type="text" id="loginUsername" placeholder="e.g. dr_elena or new_engineer" required>
+          <input type="text" id="loginUsername" placeholder="Enter your username or email" required>
         </div>
         <div class="form-group">
           <label for="loginPassword">Password</label>
-          <input type="password" id="loginPassword" placeholder="••••••••" required>
+          <input type="password" id="loginPassword" placeholder="Enter your password" required>
         </div>
         <div class="form-error" id="loginErrorMsg"></div>
         <button type="submit" class="primary-btn w-full">Sign In to Latent</button>
-        <div class="demo-credentials-box">
-          <small><strong>Demo Accounts for Evaluators:</strong><br>
-            • <strong>Instant Sign-in:</strong> <code>dr_elena</code> / <code>Author@123</code> (Verified)<br>
-            • <strong>Instant Admin:</strong> <code>admin</code> / <code>Admin@123</code><br>
-            • <strong>First-Time OTP Flow:</strong> <code>new_engineer</code> / <code>Engineer@123</code> (Unverified)<br>
-            <em>Tip: Registering any new account also triggers the first-time email OTP filter!</em>
-          </small>
-        </div>
       </form>
 
       <!-- First-Time Login OTP Verification Screen -->
@@ -626,7 +614,7 @@
           <input type="password" id="regPassword" placeholder="min 6 characters" required minlength="6">
         </div>
         <div class="form-group">
-          <label for="regRole">Role (Day 5 RBAC)</label>
+          <label for="regRole">Account Role</label>
           <select id="regRole" class="custom-select">
             <option value="AUTHOR">Author (Can publish & manage articles)</option>
             <option value="READER">Reader (Can browse, like & discuss)</option>
