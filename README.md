@@ -204,30 +204,5 @@ pytest -v
 
 ---
 
-## 🎬 2-Minute Video Demo Script (Loom Walkthrough)
-
-*A structured walkthrough guide designed to keep your video demonstration concise, professional, and impactful.*
-
-- **0:00 – 0:25 | Introduction & Public Reading Experience**
-  - *"Welcome! This is LATENT, a production-grade publication platform for AI and Data Engineering."*
-  - Show the landing page as an **unauthenticated visitor**. Demonstrate the 3-column panel grid, dark/light theme switch, category pills, and instant search.
-  - Click on an article (e.g. *Hybrid Search with BM25 and ColBERT*) to show the rich Markdown rendering, code blocks, and the call-to-action inviting guests to sign in to like and comment.
-- **0:25 – 0:50 | Authentication, Multi-Tenancy & Engagement**
-  - Sign in using the pre-seeded Author account (`dr_elena`).
-  - Demonstrate clicking the Like button (notice the heart animation and count update) and post a peer comment in the discussion section.
-- **0:50 – 1:20 | Author Studio, Image Upload & AI Assistant**
-  - Click **Write Article** to open the Author Studio.
-  - Show the live Markdown preview tab, upload a cover image (demonstrating multipart/form-data validation), and click **AI Draft Assistant** to show external API integration with automated tag generation.
-  - Publish the article and show it immediately appearing on the panel grid.
-- **1:20 – 1:45 | Exports & Resource Ownership (RBAC)**
-  - Click the **CSV Export** button in the header to download the full catalog.
-  - Inside the reader modal, click **Export .MD** to download the static-site-generator-ready Markdown file.
-  - Open **My Articles** to demonstrate that authors can manage their own articles.
-- **1:45 – 2:00 | Observability, Architecture & Wrap-Up**
-  - Click the **Metrics** button in the header to display the live `/health` status, uptime, requests processed, average latency, and the Security Audit Trail.
-  - Show the `/docs` interactive Swagger UI and conclude: *"Built with clean layered MVC architecture, robust RBAC, and zero N+1 queries. Thank you!"*
-
----
-
 ## 📄 License
 This project is open-source and licensed under the MIT License.
