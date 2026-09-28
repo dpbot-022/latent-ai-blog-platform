@@ -10,6 +10,7 @@ class Settings:
     PROJECT_NAME: str = "LATENT — Production AI & Systems Engineering Journal"
     PROJECT_VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
     # Security & JWT (Day 3)
     SECRET_KEY: str = os.getenv("SECRET_KEY", "latent-production-super-secret-key-change-in-prod-2026")

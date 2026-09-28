@@ -10,6 +10,7 @@ from backend.app.schemas.user import (
 )
 from backend.app.services.auth_service import AuthService
 from backend.app.services.email_service import EmailService
+from backend.app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication & OTP Security"])
 
@@ -43,12 +44,13 @@ def login(
     user, token, otp = AuthService.authenticate_user(db, login_data, client_ip)
 
     if otp is not None:
-        # First-time login: OTP dispatched to legit email
+        # First-time login: OTP dispatched via live SMTP
         return OTPRequiredResponse(
             requires_otp=True,
             username=user.username,
             email_masked=EmailService.mask_email(user.email),
-            message="First-time login detected. A 6-digit verification code has been dispatched to your email."
+            message="First-time login detected. A 6-digit verification code has been dispatched to your email.",
+            dev_otp_hint=None
         )
 
     # Already verified: direct token issuance
@@ -86,10 +88,11 @@ def resend_otp(
     Resends a fresh 6-digit OTP code to the user's registered email address.
     """
     client_ip = get_client_ip(request)
-    AuthService.resend_otp(db, resend_data, client_ip)
+    otp = AuthService.resend_otp(db, resend_data, client_ip)
     return {
         "status": "success",
-        "message": "A fresh 6-digit verification code has been sent to your email."
+        "message": "A fresh 6-digit verification code has been sent to your email.",
+        "dev_otp_hint": None
     }
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
