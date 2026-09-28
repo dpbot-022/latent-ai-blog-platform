@@ -1,6 +1,7 @@
 import smtplib
 import secrets
 import logging
+import threading
 from email.message import EmailMessage
 from datetime import datetime, timezone
 from typing import Optional
@@ -27,36 +28,27 @@ class EmailService:
         return f"{masked_name}@{domain}"
 
     @classmethod
-    def send_first_login_otp(cls, to_email: str, username: str, otp: str) -> bool:
-        """
-        Dispatches first-time login verification OTP email.
-        If SMTP credentials (e.g. Gmail) are provided in settings, transmits via live SMTP.
-        Otherwise, logs securely to server console without leaking to frontend.
-        """
+    def _send_smtp_background(cls, to_email: str, username: str, otp: str):
         masked = cls.mask_email(to_email)
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        try:
+            msg = EmailMessage()
+            msg["Subject"] = f"Your Verification Code: {otp} — LATENT"
+            from_addr = settings.SMTP_FROM_EMAIL or f"LATENT AI Journal <{settings.SMTP_USER}>"
+            msg["From"] = from_addr
+            msg["To"] = to_email
 
-        # 1. Attempt real SMTP dispatch if configured
-        if settings.SMTP_USER and settings.SMTP_PASSWORD:
-            try:
-                msg = EmailMessage()
-                msg["Subject"] = f"Your Verification Code: {otp} — LATENT"
-                from_addr = settings.SMTP_FROM_EMAIL or f"LATENT AI Journal <{settings.SMTP_USER}>"
-                msg["From"] = from_addr
-                msg["To"] = to_email
+            # Plain-text alternative
+            msg.set_content(
+                f"Hello {username},\n\n"
+                f"Welcome to LATENT! Use the verification code below to complete your registration:\n\n"
+                f"    {otp}\n\n"
+                f"This code will expire in 10 minutes.\n"
+                f"If you did not initiate this request, you can safely ignore this email.\n\n"
+                f"— LATENT Systems Team\n"
+            )
 
-                # Plain-text alternative
-                msg.set_content(
-                    f"Hello {username},\n\n"
-                    f"Welcome to LATENT! Use the verification code below to complete your registration:\n\n"
-                    f"    {otp}\n\n"
-                    f"This code will expire in 10 minutes.\n"
-                    f"If you did not initiate this request, you can safely ignore this email.\n\n"
-                    f"— LATENT Systems Team\n"
-                )
-
-                # Rich HTML version
-                msg.add_alternative(f"""<!DOCTYPE html>
+            # Rich HTML version
+            msg.add_alternative(f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -87,27 +79,44 @@ class EmailService:
 </body>
 </html>""", subtype="html")
 
-                if settings.SMTP_PORT == 465 and not settings.SMTP_USE_TLS:
-                    with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=12) as server:
-                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                        server.send_message(msg)
-                else:
-                    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=12) as server:
-                        if settings.SMTP_USE_TLS:
-                            server.ehlo()
-                            server.starttls()
-                            server.ehlo()
-                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                        server.send_message(msg)
+            if settings.SMTP_PORT == 465 and not settings.SMTP_USE_TLS:
+                with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=12) as server:
+                    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=12) as server:
+                    if settings.SMTP_USE_TLS:
+                        server.ehlo()
+                        server.starttls()
+                        server.ehlo()
+                    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                    server.send_message(msg)
 
-                logger.info(f"OTP successfully transmitted via live SMTP to {masked}")
-                print(f"✅ [SMTP SUCCESS] OTP email delivered to {to_email} via {settings.SMTP_HOST}")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to dispatch email via SMTP ({settings.SMTP_HOST}): {e}")
-                print(f"⚠️ [SMTP ERROR] Could not send email via {settings.SMTP_HOST}: {e}")
+            logger.info(f"OTP successfully transmitted via live SMTP to {masked}")
+            print(f"✅ [SMTP SUCCESS] OTP email delivered to {to_email} via {settings.SMTP_HOST}")
+        except Exception as e:
+            logger.error(f"Failed to dispatch email via SMTP ({settings.SMTP_HOST}): {e}")
+            print(f"⚠️ [SMTP ERROR] Could not send email via {settings.SMTP_HOST}: {e}")
 
-        # 2. Server-side log for development/testing when SMTP credentials not provided
+    @classmethod
+    def send_first_login_otp(cls, to_email: str, username: str, otp: str) -> bool:
+        """
+        Dispatches first-time login verification OTP email.
+        If SMTP credentials (e.g. Gmail) are provided, transmits asynchronously via live SMTP.
+        Also logs securely to server console for instant local development feedback.
+        """
+        masked = cls.mask_email(to_email)
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        # 1. Asynchronous live SMTP transmission
+        if settings.SMTP_USER and settings.SMTP_PASSWORD:
+            threading.Thread(
+                target=cls._send_smtp_background,
+                args=(to_email, username, otp),
+                daemon=True
+            ).start()
+
+        # 2. Server-side log for immediate feedback
         print("\n" + "=" * 70)
         print("📨 [LATENT EMAIL GATEWAY] Verification Code Dispatched")
         print("=" * 70)
@@ -123,7 +132,7 @@ class EmailService:
         print(f"    │        {otp}             │")
         print(f"    └───────────────────────────┘")
         print(f"")
-        print(f"Note: To configure live Gmail delivery, set SMTP_USER and SMTP_PASSWORD in .env.")
+        print(f"Note: Dispatching live email via {settings.SMTP_HOST} in background thread.")
         print(f"This code will expire in 10 minutes.")
         print("=" * 70 + "\n")
 

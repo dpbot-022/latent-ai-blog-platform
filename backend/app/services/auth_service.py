@@ -12,16 +12,36 @@ from backend.app.services.email_service import EmailService
 class AuthService:
     @staticmethod
     def register_user(db: Session, user_in: UserCreate, client_ip: Optional[str] = None) -> User:
-        if UserRepository.get_by_username(db, user_in.username):
+        existing_user = UserRepository.get_by_username(db, user_in.username)
+        if existing_user:
+            if not existing_user.is_verified:
+                existing_user.hashed_password = hash_password(user_in.password)
+                existing_user.email = user_in.email.strip().lower()
+                existing_user.full_name = user_in.full_name or existing_user.username
+                if user_in.role:
+                    existing_user.role = user_in.role
+                db.commit()
+                db.refresh(existing_user)
+                return existing_user
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Username '{user_in.username}' is already taken."
+                detail=f"Username '{user_in.username}' is already registered. Please sign in."
             )
 
-        if UserRepository.get_by_email(db, user_in.email):
+        existing_email = UserRepository.get_by_email(db, user_in.email)
+        if existing_email:
+            if not existing_email.is_verified:
+                existing_email.hashed_password = hash_password(user_in.password)
+                existing_email.username = user_in.username.strip()
+                existing_email.full_name = user_in.full_name or existing_email.username
+                if user_in.role:
+                    existing_email.role = user_in.role
+                db.commit()
+                db.refresh(existing_email)
+                return existing_email
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Email '{user_in.email}' is already registered."
+                detail=f"Email '{user_in.email}' is already registered. Please sign in."
             )
 
         hashed_pw = hash_password(user_in.password)

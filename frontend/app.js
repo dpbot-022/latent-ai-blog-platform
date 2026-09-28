@@ -16,14 +16,15 @@ const state = {
   sortOrder: "desc",
   articles: [],
   allArticlesMap: new Map(),
-  userLikedPostIds: new Set(JSON.parse(localStorage.getItem("latent_liked_ids") || "[]")),
-  userSavedPostIds: new Set(JSON.parse(localStorage.getItem("latent_saved_ids") || "[]")),
-  userReadingHistory: JSON.parse(localStorage.getItem("latent_history_ids") || "[]"),
+  userLikedPostIds: new Set(),
+  userSavedPostIds: new Set(),
+  userReadingHistory: [],
   followedAuthors: new Set(JSON.parse(localStorage.getItem("latent_followed_authors") || '["dr_elena", "marcus_chen"]')),
   activities: JSON.parse(localStorage.getItem("latent_activities") || "null"),
   currentReadingPost: null,
   otpPendingUsername: null,
-  otpTimerInterval: null
+  otpTimerInterval: null,
+  currentDevOtp: null
 };
 
 // DOM Elements
@@ -121,6 +122,11 @@ const dom = {
   submitOtpBtn: document.getElementById("submitOtpBtn"),
   resendOtpBtn: document.getElementById("resendOtpBtn"),
   backToLoginFormBtn: document.getElementById("backToLoginFormBtn"),
+  otpDevHelperBanner: document.getElementById("otpDevHelperBanner"),
+  otpDevCodeDisplay: document.getElementById("otpDevCodeDisplay"),
+  otpDevAutoFillBtn: document.getElementById("otpDevAutoFillBtn"),
+  otpNoticeBox: document.getElementById("otpNoticeBox"),
+  otpNoticeText: document.getElementById("otpNoticeText"),
 
   editorModal: document.getElementById("editorModal"),
   closeEditorModalBtn: document.getElementById("closeEditorModalBtn"),
@@ -286,11 +292,14 @@ function syncUserState() {
   if (state.user) {
     const histKey = `latent_history_ids_${state.user.id}`;
     const savedKey = `latent_saved_ids_${state.user.id}`;
+    const likedKey = `latent_liked_ids_${state.user.id}`;
     state.userReadingHistory = JSON.parse(localStorage.getItem(histKey) || "[]");
-    state.userSavedPostIds = new Set(JSON.parse(localStorage.getItem(savedKey) || localStorage.getItem("latent_saved_ids") || "[]"));
+    state.userSavedPostIds = new Set(JSON.parse(localStorage.getItem(savedKey) || "[]"));
+    state.userLikedPostIds = new Set(JSON.parse(localStorage.getItem(likedKey) || "[]"));
   } else {
     state.userReadingHistory = [];
     state.userSavedPostIds = new Set();
+    state.userLikedPostIds = new Set();
   }
 }
 
@@ -425,6 +434,7 @@ function logout() {
   state.user = null;
   state.userReadingHistory = [];
   state.userSavedPostIds = new Set();
+  state.userLikedPostIds = new Set();
   localStorage.removeItem("latent_token");
   localStorage.removeItem("nexus_token");
   renderAuthNav();
@@ -1552,6 +1562,22 @@ function showOtpVerificationStep(otpData) {
   dom.otpTargetEmail.textContent = otpData.email_masked || "registered email";
   if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
 
+  // Check if dev OTP code is supplied (when live SMTP credentials not set)
+  if (otpData.dev_otp_hint) {
+    if (dom.otpDevHelperBanner) dom.otpDevHelperBanner.style.display = "block";
+    if (dom.otpDevCodeDisplay) dom.otpDevCodeDisplay.textContent = otpData.dev_otp_hint;
+    state.currentDevOtp = otpData.dev_otp_hint;
+    if (dom.otpNoticeText) {
+      dom.otpNoticeText.textContent = "Local security mode active. Live SMTP is not configured in .env, so your 6-digit code has been generated for this session below.";
+    }
+  } else {
+    if (dom.otpDevHelperBanner) dom.otpDevHelperBanner.style.display = "none";
+    state.currentDevOtp = null;
+    if (dom.otpNoticeText) {
+      dom.otpNoticeText.textContent = "Please check your inbox (including Spam/Junk) for your 6-digit verification code.";
+    }
+  }
+
   // Reset inputs
   dom.otpDigits.forEach(input => {
     input.value = "";
@@ -1674,19 +1700,39 @@ if (dom.resendOtpBtn) {
         method: "POST",
         body: JSON.stringify({ username: state.otpPendingUsername })
       });
-      if (res.demo_otp_hint) {
-        dom.otpDemoCodeValue.textContent = res.demo_otp_hint;
+      if (res.dev_otp_hint) {
+        state.currentDevOtp = res.dev_otp_hint;
+        if (dom.otpDevHelperBanner) dom.otpDevHelperBanner.style.display = "block";
+        if (dom.otpDevCodeDisplay) dom.otpDevCodeDisplay.textContent = res.dev_otp_hint;
       }
       startOtpCountdown(600);
       dom.otpDigits.forEach(d => { d.value = ""; d.classList.remove("filled"); });
       dom.otpDigits[0].focus();
       if (dom.otpErrorMsg) dom.otpErrorMsg.style.display = "none";
-      showToast("Fresh 6-digit verification code sent to your email!", "info");
+      showToast("Fresh 6-digit verification code generated!", "info");
     } catch (err) {
       showToast(err.message, "danger");
     } finally {
       dom.resendOtpBtn.disabled = false;
       dom.resendOtpBtn.textContent = "Didn't receive code? Resend OTP";
+    }
+  });
+}
+
+// Auto-fill dev code button
+if (dom.otpDevAutoFillBtn) {
+  dom.otpDevAutoFillBtn.addEventListener("click", () => {
+    const code = state.currentDevOtp || (dom.otpDevCodeDisplay ? dom.otpDevCodeDisplay.textContent.trim() : "");
+    if (code && code.length === 6) {
+      code.split("").forEach((ch, idx) => {
+        if (dom.otpDigits[idx]) {
+          dom.otpDigits[idx].value = ch;
+          dom.otpDigits[idx].classList.add("filled");
+        }
+      });
+      if (dom.otpVerifyForm) {
+        dom.otpVerifyForm.requestSubmit();
+      }
     }
   });
 }
@@ -1726,7 +1772,13 @@ if (dom.otpVerifyForm) {
       closeAuthModal();
       renderAuthNav();
       showToast(`🎉 Verification complete! Welcome to Latent, ${state.user.full_name || state.user.username}!`, "success");
-      loadArticles();
+      if (state.currentView === "stats") {
+        renderStatsView();
+      } else if (state.currentView === "library") {
+        renderLibraryView("saved");
+      } else {
+        loadArticles();
+      }
     } catch (err) {
       if (dom.otpErrorMsg) {
         dom.otpErrorMsg.textContent = err.message;
@@ -1772,7 +1824,13 @@ dom.loginForm.addEventListener("submit", async (e) => {
     closeAuthModal();
     renderAuthNav();
     showToast(`Welcome back, ${state.user.full_name || state.user.username}!`, "success");
-    loadArticles();
+    if (state.currentView === "stats") {
+      renderStatsView();
+    } else if (state.currentView === "library") {
+      renderLibraryView("saved");
+    } else {
+      loadArticles();
+    }
   } catch (err) {
     dom.loginErrorMsg.textContent = err.message;
     dom.loginErrorMsg.style.display = "block";

@@ -1888,6 +1888,80 @@ code, pre {
   flex-shrink: 0;
 }
 
+.otp-dev-helper {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  margin-top: 0.25rem;
+}
+
+.otp-dev-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.otp-dev-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(59, 130, 246, 0.2);
+  color: #60A5FA;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.otp-dev-caption {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.otp-dev-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.otp-dev-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.otp-dev-code-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #38BDF8;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.otp-dev-autofill-btn {
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.otp-dev-autofill-btn:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+}
+
 
 .otp-countdown-row {
   text-align: center;

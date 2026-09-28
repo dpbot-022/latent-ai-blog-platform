@@ -547,11 +547,24 @@
             <input type="text" maxlength="1" class="otp-digit" id="otp5" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <div class="otp-security-notice">
+          <div class="otp-security-notice" id="otpNoticeBox">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
-            <span>Please check your inbox (including Spam/Junk) for your 6-digit verification code.</span>
+            <span id="otpNoticeText">Please check your inbox for your 6-digit verification code.</span>
+          </div>
+
+          <!-- Dev / Local Helper Banner when live SMTP is not active -->
+          <div id="otpDevHelperBanner" class="otp-dev-helper" style="display: none;">
+            <div class="otp-dev-header">
+              <span class="otp-dev-badge">Local Security Mode</span>
+              <span class="otp-dev-caption">Live SMTP not configured</span>
+            </div>
+            <p class="otp-dev-desc">Security code generated for this session:</p>
+            <div class="otp-dev-code-row">
+              <span class="otp-dev-code-val" id="otpDevCodeDisplay">------</span>
+              <button type="button" class="otp-dev-autofill-btn" id="otpDevAutoFillBtn">Auto-fill & Submit</button>
+            </div>
           </div>
 
           <div class="form-error" id="otpErrorMsg" style="display: none;"></div>

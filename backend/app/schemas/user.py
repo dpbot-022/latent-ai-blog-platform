@@ -53,6 +53,7 @@ class OTPRequiredResponse(BaseModel):
     username: str
     email_masked: str
     message: str
+    dev_otp_hint: Optional[str] = None
 
 class OTPVerifyRequest(BaseModel):
     username: str
